@@ -13,26 +13,26 @@
       {
         "pagePath": "pages/home/index",
         "text": "首页",
-        "iconPath": "static/icons/home.png",
-        "selectedIconPath": "static/icons/home-active.png"
+        "iconPath": "icons/home.png",
+        "selectedIconPath": "icons/home-active.png"
       },
       {
         "pagePath": "pages/forum/index/index",
         "text": "论坛",
-        "iconPath": "static/icons/forum.png",
-        "selectedIconPath": "static/icons/forum-active.png"
+        "iconPath": "icons/forum.png",
+        "selectedIconPath": "icons/forum-active.png"
       },
       {
         "pagePath": "pages/knowledge/index",
         "text": "知识库",
-        "iconPath": "static/icons/knowledge.png",
-        "selectedIconPath": "static/icons/knowledge-active.png"
+        "iconPath": "icons/knowledge.png",
+        "selectedIconPath": "icons/knowledge-active.png"
       },
       {
         "pagePath": "pages/settings/index",
         "text": "设置",
-        "iconPath": "static/icons/settings.png",
-        "selectedIconPath": "static/icons/settings-active.png"
+        "iconPath": "icons/settings.png",
+        "selectedIconPath": "icons/settings-active.png"
       }
     ]
   },
