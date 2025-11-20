@@ -3,7 +3,7 @@
     "pages/home/index",
     "pages/forum/index/index",
     "pages/forum/detail/index",
-    "pages/identify/index",
+    "pages/knowledge/index",
     "pages/settings/index"
   ],
   "window": {
@@ -14,7 +14,7 @@
   },
   "tabBar": {
     "color": "#999999",
-    "selectedColor": "#1AAD19",
+    "selectedColor": "#4CAF50",
     "backgroundColor": "#ffffff",
     "list": [
       {
@@ -30,10 +30,10 @@
         "selectedIconPath": "static/icons/forum-active.png"
       },
       {
-        "pagePath": "pages/identify/index",
-        "text": "识别",
-        "iconPath": "static/icons/identify.png",
-        "selectedIconPath": "static/icons/identify-active.png"
+        "pagePath": "pages/knowledge/index",
+        "text": "知识库",
+        "iconPath": "static/icons/knowledge.png",
+        "selectedIconPath": "static/icons/knowledge-active.png"
       },
       {
         "pagePath": "pages/settings/index",

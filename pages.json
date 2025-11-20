@@ -17,16 +17,22 @@
         "selectedIconPath": "static/icons/home-active.png"
       },
       {
-        "pagePath": "pages/forum/index",
+        "pagePath": "pages/forum/index/index",
         "text": "论坛",
         "iconPath": "static/icons/forum.png",
         "selectedIconPath": "static/icons/forum-active.png"
       },
       {
-        "pagePath": "pages/history/index",
-        "text": "历史",
-        "iconPath": "static/icons/history.png",
-        "selectedIconPath": "static/icons/history-active.png"
+        "pagePath": "pages/knowledge/index",
+        "text": "知识库",
+        "iconPath": "static/icons/knowledge.png",
+        "selectedIconPath": "static/icons/knowledge-active.png"
+      },
+      {
+        "pagePath": "pages/settings/index",
+        "text": "设置",
+        "iconPath": "static/icons/settings.png",
+        "selectedIconPath": "static/icons/settings-active.png"
       }
     ]
   },
@@ -93,15 +99,21 @@
       }
     },
     {
-      "path": "pages/forum/index",
+      "path": "pages/forum/index/index",
       "style": {
         "navigationBarTitleText": "农业论坛"
       }
     },
     {
-      "path": "pages/forum/detail",
+      "path": "pages/forum/detail/index",
       "style": {
         "navigationBarTitleText": "帖子详情"
+      }
+    },
+    {
+      "path": "pages/forum/create/index",
+      "style": {
+        "navigationBarTitleText": "发布帖子"
       }
     },
     {
