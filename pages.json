@@ -1,0 +1,118 @@
+{
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "农业应用",
+    "navigationBarBackgroundColor": "#ffffff",
+    "backgroundColor": "#f8f8f8"
+  },
+  "tabBar": {
+    "color": "#999999",
+    "selectedColor": "#4CAF50",
+    "backgroundColor": "#ffffff",
+    "list": [
+      {
+        "pagePath": "pages/home/index",
+        "text": "首页",
+        "iconPath": "static/icons/home.png",
+        "selectedIconPath": "static/icons/home-active.png"
+      },
+      {
+        "pagePath": "pages/forum/index",
+        "text": "论坛",
+        "iconPath": "static/icons/forum.png",
+        "selectedIconPath": "static/icons/forum-active.png"
+      },
+      {
+        "pagePath": "pages/history/index",
+        "text": "历史",
+        "iconPath": "static/icons/history.png",
+        "selectedIconPath": "static/icons/history-active.png"
+      }
+    ]
+  },
+  "pages": [
+    {
+      "path": "pages/home/index",
+      "style": {
+        "navigationBarTitleText": "首页"
+      }
+    },
+    {
+      "path": "pages/login/index",
+      "style": {
+        "navigationBarTitleText": "登录"
+      }
+    },
+    {
+      "path": "pages/register/index",
+      "style": {
+        "navigationBarTitleText": "注册"
+      }
+    },
+
+    {
+      "path": "pages/recommend/index",
+      "style": {
+        "navigationBarTitleText": "农药推荐"
+      }
+    },
+    {
+      "path": "pages/knowledge/index",
+      "style": {
+        "navigationBarTitleText": "知识库"
+      }
+    },
+    {
+      "path": "pages/history/index",
+      "style": {
+        "navigationBarTitleText": "历史记录"
+      }
+    },
+    {
+      "path": "pages/usage-guide/index",
+      "style": {
+        "navigationBarTitleText": "用药指导"
+      }
+    },
+    {
+      "path": "pages/feedback/index",
+      "style": {
+        "navigationBarTitleText": "意见反馈"
+      }
+    },
+    {
+      "path": "pages/guide/index",
+      "style": {
+        "navigationBarTitleText": "使用指南"
+      }
+    },
+    {
+      "path": "pages/pesticide-detail/index",
+      "style": {
+        "navigationBarTitleText": "农药详情"
+      }
+    },
+    {
+      "path": "pages/forum/index",
+      "style": {
+        "navigationBarTitleText": "农业论坛"
+      }
+    },
+    {
+      "path": "pages/forum/detail",
+      "style": {
+        "navigationBarTitleText": "帖子详情"
+      }
+    },
+    {
+      "path": "pages/settings/index",
+      "style": {
+        "navigationBarTitleText": "设置"
+      }
+    }
+  ],
+  "condition": {
+    "current": 0,
+    "list": []
+  }
+}

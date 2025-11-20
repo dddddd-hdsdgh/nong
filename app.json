@@ -1,0 +1,47 @@
+{
+  "pages": [
+    "pages/home/index",
+    "pages/forum/index/index",
+    "pages/forum/detail/index",
+    "pages/identify/index",
+    "pages/settings/index"
+  ],
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#fff",
+    "navigationBarTitleText": "农科助手",
+    "navigationBarTextStyle": "black"
+  },
+  "tabBar": {
+    "color": "#999999",
+    "selectedColor": "#1AAD19",
+    "backgroundColor": "#ffffff",
+    "list": [
+      {
+        "pagePath": "pages/home/index",
+        "text": "首页",
+        "iconPath": "static/icons/home.png",
+        "selectedIconPath": "static/icons/home-active.png"
+      },
+      {
+        "pagePath": "pages/forum/index/index",
+        "text": "论坛",
+        "iconPath": "static/icons/forum.png",
+        "selectedIconPath": "static/icons/forum-active.png"
+      },
+      {
+        "pagePath": "pages/identify/index",
+        "text": "识别",
+        "iconPath": "static/icons/identify.png",
+        "selectedIconPath": "static/icons/identify-active.png"
+      },
+      {
+        "pagePath": "pages/settings/index",
+        "text": "设置",
+        "iconPath": "static/icons/settings.png",
+        "selectedIconPath": "static/icons/settings-active.png"
+      }
+    ]
+  },
+  "sitemapLocation": "sitemap.json"
+}

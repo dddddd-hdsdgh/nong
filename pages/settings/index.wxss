@@ -1,0 +1,170 @@
+.settings-container {
+  background-color: #F5F5F5;
+  min-height: 100vh;
+  padding-bottom: 60rpx;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* 防止滚动条 */
+page {
+  background-color: #F5F5F5;
+  height: 100%;
+}
+
+/* 用户信息区域 */
+.user-section {
+  display: flex;
+  align-items: center;
+  background-color: #FFFFFF;
+  padding: 40rpx;
+  margin-bottom: 20rpx;
+  border-radius: 24rpx;
+  margin: 20rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.05);
+}
+
+.avatar-container {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 50%;
+  overflow: hidden;
+  margin-right: 30rpx;
+  background-color: #F0F0F0;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
+  border: 2rpx solid #E0E0E0;
+}
+
+.avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.user-info {
+  flex: 1;
+}
+
+.username {
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #333333;
+  margin-bottom: 10rpx;
+}
+
+.user-role {
+  font-size: 28rpx;
+  color: #999999;
+}
+
+.user-arrow .arrow-icon,
+.setting-arrow .arrow-icon {
+  color: #CCCCCC;
+  font-size: 32rpx;
+}
+
+/* 设置区域 */
+.settings-section {
+  margin-bottom: 20rpx;
+  margin: 20rpx;
+}
+
+.section-title {
+  font-size: 28rpx;
+  color: #666666;
+  padding: 20rpx 0;
+  margin-bottom: 10rpx;
+  font-weight: 500;
+}
+
+.setting-group {
+  background-color: #FFFFFF;
+  border-radius: 24rpx;
+  overflow: hidden;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.05);
+}
+
+.setting-item {
+  display: flex;
+  align-items: center;
+  padding: 32rpx 40rpx;
+  border-bottom: 1px solid #F0F0F0;
+  transition: background-color 0.2s;
+}
+
+/* 点击效果 */
+.setting-item:active {
+  background-color: #F9F9F9;
+}
+
+.setting-item:last-child {
+  border-bottom: none;
+}
+
+.setting-icon {
+  width: 60rpx;
+  display: flex;
+  justify-content: center;
+  margin-right: 30rpx;
+}
+
+.setting-icon .icon {
+  font-size: 40rpx;
+}
+
+.setting-content {
+  flex: 1;
+}
+
+.setting-title {
+  font-size: 32rpx;
+  color: #333333;
+  margin-bottom: 4rpx;
+}
+
+.setting-desc {
+  font-size: 26rpx;
+  color: #999999;
+}
+
+.setting-arrow {
+  margin-left: 20rpx;
+}
+
+/* 登录/退出按钮 */
+.logout-btn,
+.login-btn {
+  margin: 40rpx 20rpx 20rpx;
+  background-color: #FFFFFF;
+  color: #FF3B30;
+  border: 2rpx solid #FF3B30;
+  font-size: 34rpx;
+  border-radius: 24rpx;
+  height: 90rpx;
+  line-height: 90rpx;
+  font-weight: 500;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+}
+
+.login-btn {
+  color: #4CAF50;
+  border-color: #4CAF50;
+}
+
+.logout-btn:active {
+  background-color: #FFF5F5;
+  opacity: 0.9;
+}
+
+.login-btn:active {
+  background-color: #F1F8E9;
+  opacity: 0.9;
+}
+
+/* 适配不同屏幕尺寸 */
+@media screen and (min-width: 768px) {
+  .settings-container {
+    max-width: 600px;
+    margin: 0 auto;
+    min-height: 100vh;
+  }
+}

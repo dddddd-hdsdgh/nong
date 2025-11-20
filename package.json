@@ -1,0 +1,10 @@
+{
+  "name": "nong",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {},
+  "description": "原生微信小程序项目",
+  "keywords": ["wechat", "miniprogram"],
+  "author": "",
+  "license": "ISC"
+}

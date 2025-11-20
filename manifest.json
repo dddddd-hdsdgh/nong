@@ -1,0 +1,54 @@
+{
+  "name": "nong",
+  "appid": "",
+  "description": "农业病虫害识别系统",
+  "versionName": "1.0.0",
+  "versionCode": 100,
+  "transformPx": true,
+  "uniStatistics": {
+    "enable": false
+  },
+  "app-plus": {
+    "usingComponents": true,
+    "compatible": {
+      "ignoreVersion": true
+    },
+    "runmode": "liberate",
+    "splashscreen": {
+      "autoclose": true,
+      "waiting": true
+    }
+  },
+  "h5": {
+    "title": "农业应用",
+    "router": {
+      "mode": "hash"
+    },
+    "domain": ""
+  },
+  "mp-weixin": {
+    "appid": "wx8ebe9b01303ce196",
+    "setting": {
+      "urlCheck": false,
+      "es6": true,
+      "enhance": true,
+      "postcss": true,
+      "preloadBackgroundData": false,
+      "minified": true,
+      "newFeature": true,
+      "coverView": true,
+      "nodeModules": false,
+      "autoAudits": false,
+      "showShadowRootInWxmlPanel": true
+    },
+    "usingComponents": true,
+    "permission": {
+      "scope.writePhotosAlbum": {
+        "desc": "保存图片到相册"
+      },
+      "scope.camera": {
+        "desc": "使用相机进行病虫害识别"
+      }
+    }
+  }
+}

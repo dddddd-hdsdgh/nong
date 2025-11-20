@@ -1,0 +1,279 @@
+/* 农业病虫害识别系统首页样式 */
+.container {
+  padding: 20rpx;
+  box-sizing: border-box;
+  min-height: 100vh;
+  background-color: #f5f7f2; /* 浅色背景 */
+  display: flex;
+  flex-direction: column;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* 头部样式 */
+.header {
+  text-align: center;
+  margin: 40rpx 0 50rpx;
+  padding: 30rpx 0;
+  background: white;
+  border-radius: 24rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.06);
+}
+
+.title {
+  font-size: 44rpx;
+  font-weight: 600;
+  color: #4CAF50; /* 主色调 */
+  display: block;
+  margin-bottom: 12rpx;
+  line-height: 1.4;
+}
+
+.subtitle {
+  font-size: 28rpx;
+  color: #666;
+  opacity: 0.9;
+}
+
+/* 主要内容区域 */
+.main-section {
+  flex: 1;
+}
+
+/* 快速识别按钮 */
+.quick-entry {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 50rpx;
+}
+
+.identify-btn {
+  background: linear-gradient(135deg, #4CAF50, #45a049);
+  border-radius: 24rpx; /* 统一圆角 */
+  padding: 50rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8rpx 16rpx rgba(76, 175, 80, 0.25); /* 柔和阴影 */
+  transition: all 0.3s ease;
+  min-height: 300rpx;
+  width: 100%;
+  max-width: 600rpx;
+}
+
+.identify-btn:active {
+  transform: scale(0.98);
+  box-shadow: 0 4rpx 12rpx rgba(76, 175, 80, 0.2);
+}
+
+.btn-icon {
+  width: 140rpx;
+  height: 140rpx;
+  margin-bottom: 24rpx;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 50%;
+  padding: 20rpx;
+}
+
+.btn-text {
+  color: white;
+  font-size: 38rpx;
+  font-weight: 600;
+}
+
+.btn-hint {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 28rpx;
+  margin-top: 16rpx;
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* 识别中状态样式 */
+.identify-loading {
+  background: linear-gradient(135deg, #666666, #555555);
+  pointer-events: none;
+}
+
+/* loading spinner 样式 */
+.loading-spinner {
+  width: 80rpx;
+  height: 80rpx;
+  border: 8rpx solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s ease-in-out infinite;
+  margin-bottom: 20rpx;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* 小型loading spinner样式 */
+.loading-spinner-small {
+  width: 40rpx;
+  height: 40rpx;
+  border: 4rpx solid rgba(0, 122, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #007AFF;
+  animation: spin 1s ease-in-out infinite;
+  margin-bottom: 10rpx;
+}
+
+/* 功能分类中的loading状态 */
+.feature-loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* 功能分类区域 */
+.feature-section {
+  background: white;
+  border-radius: 24rpx;
+  padding: 36rpx;
+  margin-bottom: 36rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.06);
+}
+
+.section-title {
+  font-size: 34rpx;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 32rpx;
+  position: relative;
+  padding-left: 18rpx;
+}
+
+.section-title::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8rpx;
+  height: 36rpx;
+  background-color: #4CAF50;
+  border-radius: 4rpx;
+}
+
+.feature-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 24rpx;
+}
+
+.feature-item {
+  width: calc(50% - 12rpx);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32rpx 0;
+  margin-bottom: 0;
+  background-color: #f8fbf8;
+  border-radius: 20rpx;
+  transition: all 0.3s;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+}
+
+.feature-item:active {
+  transform: scale(0.97);
+  background-color: #f0f7f0;
+}
+
+.feature-icon {
+  font-size: 72rpx;
+  margin-bottom: 16rpx;
+}
+
+.feature-name {
+  font-size: 28rpx;
+  color: #333;
+  font-weight: 500;
+}
+
+/* 推荐信息区域 */
+.recommend-section {
+  background: white;
+  border-radius: 24rpx;
+  padding: 36rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.06);
+}
+
+.info-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.info-item {
+  padding: 24rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
+  position: relative;
+  transition: all 0.3s;
+}
+
+.info-item:hover {
+  background-color: #fafafa;
+  padding-left: 12rpx;
+  padding-right: 12rpx;
+}
+
+.info-item:last-child {
+  border-bottom: none;
+}
+
+.info-title {
+  font-size: 28rpx;
+  color: #333;
+  display: block;
+  margin-bottom: 10rpx;
+  line-height: 46rpx;
+  font-weight: 500;
+}
+
+.info-time {
+  font-size: 24rpx;
+  color: #999;
+}
+
+/* 加载状态 */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 100rpx 0;
+}
+
+.loading-spinner {
+  width: 60rpx;
+  height: 60rpx;
+  border: 8rpx solid #f3f3f3;
+  border-top: 8rpx solid #007AFF;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 20rpx;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-text {
+  font-size: 28rpx;
+  color: #666;
+}
+
+/* 底部提示 */
+.footer {
+  text-align: center;
+  padding: 40rpx 0 30rpx;
+}
+
+.footer-text {
+  font-size: 26rpx;
+  color: #999;
+  opacity: 0.9;
+}

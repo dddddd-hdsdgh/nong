@@ -1,0 +1,38 @@
+<!-- 病虫害识别页面 -->
+<view class="container">
+  <view class="header">
+    <text class="title">病虫害识别</text>
+  </view>
+  
+  <view class="content">
+    <!-- 相机/图片预览区域 -->
+    <view class="camera-area">
+      <text wx:if="{{!previewImage && !isRecognizing}}">点击下方按钮拍照或上传图片</text>
+      <!-- 加载中状态 -->
+      <view wx:elif="{{isRecognizing}}" style="display: flex; flex-direction: column; align-items: center;">
+        <view class="loading-spinner"></view>
+        <text class="loading">识别中...</text>
+      </view>
+    </view>
+    
+    <!-- 操作按钮组 -->
+    <view class="action-buttons">
+      <button bindtap="takePhoto" disabled="{{isRecognizing}}">拍照识别</button>
+      <button bindtap="chooseImage" disabled="{{isRecognizing}}">从相册选择</button>
+    </view>
+    
+    <!-- 状态提示 -->
+    <text class="loading" wx:if="{{!isRecognizing && !previewImage}}">准备就绪，点击按钮开始识别</text>
+    
+    <!-- 识别结果展示区域 -->
+    <view class="result-container" wx:if="{{recognitionResult}}">
+      <view class="result-title">识别结果</view>
+      <view class="result-content">
+        <text wx:if="{{recognitionResult.diseaseName}}">病害名称：{{recognitionResult.diseaseName}}</text>
+        <text wx:if="{{recognitionResult.confidence}}">置信度：{{recognitionResult.confidence}}</text>
+        <text wx:if="{{recognitionResult.description}}">描述：{{recognitionResult.description}}</text>
+        <text wx:if="{{recognitionResult.solution}}">防治建议：{{recognitionResult.solution}}</text>
+      </view>
+    </view>
+  </view>
+</view>

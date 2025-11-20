@@ -1,0 +1,180 @@
+/* 全局样式 - 农业病虫害识别系统 */
+
+/* 设计规范颜色常量 */
+/* 主色调: #4CAF50 */
+/* 辅助色: #FF9800 */
+/* 文字颜色: #333333 */
+/* 背景色: #F5F5F5 */
+
+/* 全局样式 */
+view, text, image, button, input, textarea {
+  box-sizing: border-box;
+}
+
+page {
+  background-color: #F5F5F5;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: #333333;
+  height: 100%;
+  overflow-x: hidden;
+}
+
+/* 通用容器样式 */
+.container {
+  padding: 30rpx;
+  background-color: #FFFFFF;
+  min-height: 100vh;
+}
+
+/* 通用按钮样式 */
+button {
+  font-family: inherit;
+  box-shadow: none;
+  margin: 0;
+  font-size: 32rpx;
+  font-weight: 500;
+  border-radius: 24rpx;
+}
+
+/* 主按钮 */
+.btn-primary {
+  background-color: #4CAF50;
+  color: #FFFFFF;
+  border: none;
+}
+
+.btn-primary:active {
+  background-color: #388E3C;
+}
+
+/* 次要按钮 */
+.btn-secondary {
+  background-color: #FFFFFF;
+  color: #4CAF50;
+  border: 1rpx solid #4CAF50;
+}
+
+.btn-secondary:active {
+  background-color: #C8E6C9;
+}
+
+/* 文本样式 */
+.text-primary {
+  color: #333333;
+  font-size: 36rpx;
+  font-weight: 600;
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+  font-size: 32rpx;
+}
+
+.text-tertiary {
+  color: var(--text-tertiary);
+  font-size: 28rpx;
+}
+
+/* 卡片样式 */
+.card {
+  background-color: var(--bg-primary);
+  border-radius: var(--border-radius-md);
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.05);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+/* 分割线 */
+.divider {
+  height: 1rpx;
+  background-color: var(--border-light);
+  margin: var(--spacing-md) 0;
+}
+
+/* 加载动画 */
+.loading-spinner {
+  width: 40rpx;
+  height: 40rpx;
+  border: 3rpx solid rgba(76, 175, 80, 0.3);
+  border-top-color: #4CAF50;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto;
+}
+
+.loading-spinner-small {
+  width: 30rpx;
+  height: 30rpx;
+  border: 2rpx solid rgba(76, 175, 80, 0.3);
+  border-top-color: #4CAF50;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 列表项样式 */
+.list-item {
+  display: flex;
+  align-items: center;
+  padding: 30rpx;
+  border-bottom: 1rpx solid #F0F0F0;
+  transition: background-color 0.2s;
+}
+
+.list-item:active {
+  background-color: #F9F9F9;
+}
+
+.list-item:last-child {
+  border-bottom: none;
+}
+
+/* 图标容器 */
+.icon-container {
+  width: 60rpx;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-right: 30rpx;
+}
+
+/* 箭头图标 */
+.arrow-icon {
+  color: #999999;
+  font-size: 32rpx;
+}
+
+/* 空状态提示 */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 50rpx 0;
+  color: #999999;
+}
+
+.empty-state-icon {
+  font-size: 120rpx;
+  margin-bottom: 30rpx;
+  opacity: 0.5;
+}
+
+.empty-state-text {
+  font-size: 28rpx;
+}
+
+/* 响应式设计 */
+@media screen and (min-width: 768px) {
+  .container {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+}

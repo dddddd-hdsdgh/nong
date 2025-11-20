@@ -1,0 +1,79 @@
+<!-- 农业病虫害识别系统首页 -->
+<view class="container">
+  <!-- 头部区域 -->
+  <view class="header">
+    <text class="title">{{title}}</text>
+    <text class="subtitle">智能识别，科学防治</text>
+  </view>
+  
+  <!-- 主要功能区域 -->
+  <view class="main-section" wx:if="{{!loading}}">
+    <!-- 拍照识别快捷入口 -->
+    <view class="quick-entry">
+      <view class="identify-btn" bindtap="navigateToIdentify" wx:if="{{!identifyLoading}}">
+        <image class="btn-icon" src="/static/icons/identify.svg" mode="aspectFit"></image>
+        <text class="btn-text">立即识别</text>
+        <text class="btn-hint">点击选择拍照或从相册上传</text>
+      </view>
+      <!-- 识别中状态 -->
+        <view class="identify-btn identify-loading" wx:else>
+          <view class="loading-spinner"></view>
+          <text class="btn-text">识别中...</text>
+        </view>
+      </view>
+    
+    <!-- 功能分类 -->
+    <view class="feature-section">
+      <view class="section-title">主要功能</view>
+      <view class="feature-grid">
+        <view class="feature-item" bindtap="navigateToIdentify" wx:if="{{!identifyLoading}}">
+          <view class="feature-icon">📷</view>
+          <text class="feature-name">病害识别</text>
+        </view>
+        <view class="feature-item feature-loading" wx:else>
+          <view class="loading-spinner-small"></view>
+          <text class="feature-name">识别中...</text>
+        </view>
+        <view class="feature-item" bindtap="navigateToKnowledge">
+          <view class="feature-icon">📚</view>
+          <text class="feature-name">知识库</text>
+        </view>
+        <view class="feature-item" bindtap="navigateToHistory">
+          <view class="feature-icon">📋</view>
+          <text class="feature-name">历史记录</text>
+        </view>
+        <view class="feature-item" bindtap="navigateToGuide">
+          <view class="feature-icon">🧑‍🌾</view>
+          <text class="feature-name">使用指南</text>
+        </view>
+      </view>
+    </view>
+    
+    <!-- 推荐信息 -->
+    <view class="recommend-section">
+      <view class="section-title">农业资讯</view>
+      <view class="info-list">
+        <view class="info-item" wx:for="{{agricultureNews}}" wx:key="id" bindtap="onNewsItemTap" data-id="{{item.id}}">
+          <text class="info-title">{{item.title}}</text>
+          <text class="info-time">{{item.date}}</text>
+        </view>
+        <!-- 模拟数据提示 -->
+        <view class="info-item" wx:if="{{!agricultureNews || agricultureNews.length === 0}}">
+          <text class="info-title">暂无最新资讯</text>
+          <text class="info-time">--</text>
+        </view>
+      </view>
+    </view>
+  </view>
+  
+  <!-- 加载中状态 -->
+  <view class="loading-container" wx:else>
+    <view class="loading-spinner"></view>
+    <text class="loading-text">正在加载中...</text>
+  </view>
+  
+  <!-- 底部提示 -->
+  <view class="footer" wx:if="{{!loading}}">
+    <text class="footer-text">点击拍照按钮，快速识别病虫害</text>
+  </view>
+</view>

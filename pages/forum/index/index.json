@@ -1,0 +1,8 @@
+{
+  "navigationBarTitleText": "农业论坛",
+  "navigationBarBackgroundColor": "#4CAF50",
+  "navigationBarTextStyle": "white",
+  "backgroundColor": "#f8f8f8",
+  "enablePullDownRefresh": true,
+  "disableScroll": false
+}
