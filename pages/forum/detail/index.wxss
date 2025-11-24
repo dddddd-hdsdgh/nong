@@ -1,9 +1,10 @@
 .detail-container {
   background-color: #f8f8f8;
   min-height: 100vh;
-  padding-bottom: 100rpx;
+  padding-bottom: 120rpx;
 }
 
+/* 帖子详情区域 */
 .post-detail {
   background-color: white;
   padding: 30rpx;
@@ -45,10 +46,14 @@
   background-color: #4CAF50;
   color: white;
   font-size: 28rpx;
-  padding: 0 30rpx;
+  padding: 0 28rpx;
   height: 60rpx;
   line-height: 60rpx;
   border-radius: 30rpx;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .followed-btn {
@@ -81,18 +86,21 @@
   display: flex;
   flex-wrap: wrap;
   margin-bottom: 30rpx;
+  gap: 20rpx;
 }
 
 .post-img {
-  width: 340rpx;
-  height: 340rpx;
-  margin-right: 20rpx;
-  margin-bottom: 20rpx;
+  width: calc((100% - 20rpx) / 2);
+  aspect-ratio: 1;
   border-radius: 10rpx;
+  object-fit: cover;
 }
 
-.post-img:nth-child(2n) {
-  margin-right: 0;
+/* 优化单张图片显示 */
+.post-images image:first-child:nth-last-child(1) {
+  width: 100%;
+  max-height: 400rpx;
+  aspect-ratio: auto;
 }
 
 .post-footer {
@@ -278,37 +286,81 @@
 }
 
 .comment-input-area {
-  position: fixed;
+  position: sticky;
   bottom: 0;
-  left: 0;
-  right: 0;
   background-color: white;
+  padding: 20rpx;
   display: flex;
   align-items: center;
-  padding: 20rpx 30rpx;
-  border-top: 1rpx solid #e0e0e0;
+  border-top: 1rpx solid #eee;
+  box-shadow: 0 -2rpx 10rpx rgba(0, 0, 0, 0.1);
+  z-index: 99;
 }
 
 .comment-input {
   flex: 1;
-  background-color: #f5f5f5;
-  border-radius: 40rpx;
-  padding: 20rpx 30rpx;
-  font-size: 30rpx;
+  height: 70rpx;
+  border: 1rpx solid #ddd;
+  border-radius: 35rpx;
+  padding: 0 30rpx;
   margin-right: 20rpx;
+  background-color: #f9f9f9;
+  font-size: 28rpx;
 }
 
 .send-btn {
   background-color: #4CAF50;
   color: white;
+  height: 70rpx;
+  line-height: 70rpx;
+  padding: 0 28rpx;
+  border-radius: 35rpx;
   font-size: 28rpx;
-  padding: 0 30rpx;
-  height: 60rpx;
-  line-height: 60rpx;
-  border-radius: 30rpx;
+  border: none;
 }
 
 .send-btn[disabled] {
   background-color: #ccc;
-  color: #fff;
+}
+
+/* 响应式适配 */
+/* 小屏设备优化 */
+@media screen and (max-width: 320px) {
+  .post-title {
+    font-size: 36rpx;
+  }
+  
+  .post-text {
+    font-size: 30rpx;
+  }
+  
+  .post-img {
+    width: calc((100% - 15rpx) / 2);
+    gap: 15rpx;
+  }
+  
+  .post-detail,
+  .comment-section {
+    padding: 20rpx;
+  }
+}
+
+/* 大屏设备优化 */
+@media screen and (min-width: 400px) {
+  .post-title {
+    font-size: 44rpx;
+  }
+  
+  .post-text {
+    font-size: 34rpx;
+  }
+  
+  .post-img {
+    width: calc((100% - 25rpx) / 2);
+    gap: 25rpx;
+  }
+  
+  .post-images image:first-child:nth-last-child(1) {
+    max-height: 500rpx;
+  }
 }

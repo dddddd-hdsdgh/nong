@@ -1,5 +1,5 @@
 // pages/knowledge/detail/index.js
-const knowledgeService = require('../../../services/knowledge');
+const knowledgeService = require('../../../services/knowledge.js');
 const app = getApp();
 
 Page({

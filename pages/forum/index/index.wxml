@@ -1,19 +1,22 @@
 <view class="forum-container">
-  <!-- 顶部导航 -->
+  <!-- 顶部导航栏 -->
   <view class="forum-header">
-    <view class="header-left">
-      <text class="forum-title">🌱 农业论坛</text>
-      <text class="forum-subtitle">智慧农业 · 绿色未来</text>
-    </view>
-    <view class="post-btn" bindtap="goToPost">
-      <text class="plus-icon">✏️</text>
-      <text>发布</text>
+    <text class="forum-title">农业论坛</text>
+    <view class="header-actions">
+      <view class="search-icon">
+        <text class="iconfont">🔍</text>
+      </view>
+      <view class="post-btn-top" bindtap="createPost">
+        <text class="iconfont">✍️</text>
+      </view>
+      <view class="more-icon">
+        <text class="iconfont">•••</text>
+      </view>
     </view>
   </view>
-  
   <!-- 分类标签 -->
   <view class="forum-tabs">
-    <scroll-view class="tabs-scroll" scroll-x>
+    <scroll-view class="tabs-scroll" scroll-x enable-flex show-scrollbar="false">
       <view class="tabs-container">
         <view class="tab-item {{currentTab === 'recommend' ? 'active' : ''}}" bindtap="switchTab" data-tab="recommend">
           <text class="tab-icon">⭐</text>
@@ -40,66 +43,39 @@
   </view>
   
   <!-- 帖子列表 -->
-  <scroll-view class="forum-list" scroll-y="true" enable-back-to-top="true">
+  <scroll-view class="forum-list" scroll-y="true" enable-back-to-top="true" enhanced show-scrollbar="false">
     <block wx:for="{{forumList}}" wx:key="id">
       <view class="post-card" bindtap="goToDetail" data-id="{{item.id}}">
         <!-- 用户信息区域 -->
         <view class="post-header">
-          <view class="avatar-wrapper">
-            <image class="avatar" src="{{item.avatar || '/static/icons/default-avatar.png'}}" mode="aspectFill"></image>
-            <view class="online-status" wx:if="{{item.isOnline}}"></view>
-          </view>
+          <image class="avatar" src="{{item.avatar || '/static/icons/default-avatar.png'}}"></image>
           <view class="user-info">
-            <view class="username-row">
-              <text class="username">{{item.username}}</text>
-              <view class="user-level" wx:if="{{item.level}}">Lv.{{item.level}}</view>
-            </view>
-            <view class="post-meta">
-              <text class="post-time">{{item.time}}</text>
-              <text class="location" wx:if="{{item.location}}">📍 {{item.location}}</text>
-            </view>
+            <text class="username">{{item.username}}</text>
+            <text class="post-time">{{item.time}}</text>
           </view>
-          <view class="follow-btn" wx:if="{{!item.isFollowed}}" bindtap="followUser" data-id="{{item.id}}">关注</view>
+          <view class="post-meta" wx:if="{{item.isHot}}">
+            <text class="top-badge">置顶</text>
+          </view>
         </view>
         
         <!-- 内容区域 -->
         <view class="post-content">
-          <view class="post-title-row">
-            <text class="post-title">{{item.title}}</text>
-            <view class="hot-badge" wx:if="{{item.isHot}}">🔥 热门</view>
-          </view>
           <text class="post-text">{{item.content}}</text>
           
           <!-- 图片展示 -->
           <view class="post-images" wx:if="{{item.images && item.images.length > 0}}">
-            <view class="image-wrapper {{item.images.length === 1 ? 'single-image' : ''}}" wx:for="{{item.images}}" wx:key="*this" wx:for-item="img" wx:for-index="imgIndex">
-              <image src="{{img}}" mode="aspectFill" class="post-img" bindtap="previewImage" data-url="{{img}}"></image>
-              <view class="image-count" wx:if="{{imgIndex === 0 && item.images.length > 3}}">
-                +{{item.images.length - 3}}
-              </view>
-            </view>
+            <image class="post-img" src="{{img}}" wx:for="{{item.images}}" wx:for-item="img" wx:key="index" wx:if="{{index < 3}}"></image>
           </view>
         </view>
         
-        <!-- 底部操作栏 -->
+        <!-- 底部标签和统计 -->
         <view class="post-footer">
           <view class="post-tags">
-            <view class="post-tag">{{item.category}}</view>
-            <view class="post-tag secondary" wx:if="{{item.subCategory}}">{{item.subCategory}}</view>
+            <text class="post-tag" wx:if="{{item.category}}">#{{item.category}}</text>
           </view>
-          <view class="post-actions">
-            <view class="action-item" bindtap="toggleLike" data-id="{{item.id}}">
-              <text class="action-icon {{item.isLiked ? 'liked' : ''}}">❤️</text>
-              <text class="action-text">{{item.likes}}</text>
-            </view>
-            <view class="action-item" bindtap="goToDetail" data-id="{{item.id}}">
-              <text class="action-icon">💬</text>
-              <text class="action-text">{{item.comments}}</text>
-            </view>
-            <view class="action-item" bindtap="share" data-id="{{item.id}}">
-              <text class="action-icon">🔗</text>
-              <text class="action-text">分享</text>
-            </view>
+          <view class="post-stats">
+            <text class="stat-item">❤️ {{item.likes}}</text>
+            <text class="stat-item">💬 {{item.comments}}</text>
           </view>
         </view>
       </view>

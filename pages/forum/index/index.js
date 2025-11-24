@@ -46,7 +46,7 @@ Page({
     wx.showLoading({
       title: '加载中',
     });
-
+    
     // 模拟数据加载
     setTimeout(() => {
       const mockData = this.getMockForumData();
@@ -68,6 +68,17 @@ Page({
 
       wx.hideLoading();
     }, 800);
+  },
+  
+  // 创建新帖子
+  createPost: function() {
+    // 跳转到发帖页面或显示发帖弹窗
+    wx.showToast({
+      title: '跳转到发帖页面',
+      icon: 'none'
+    });
+    // 实际项目中这里应该是 wx.navigateTo 跳转到发帖页面
+    // wx.navigateTo({ url: '/pages/forum/create/create' });
   },
 
   // 加载更多

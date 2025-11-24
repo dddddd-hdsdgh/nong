@@ -1,6 +1,6 @@
 // 知识库页面逻辑
 // 导入知识服务
-const knowledgeService = require('../../services/knowledge');
+const knowledgeService = require('../../services/knowledge.js');
 const app = getApp();
 
 Page({
