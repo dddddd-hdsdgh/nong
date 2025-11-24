@@ -1,4 +1,5 @@
 // 农业病虫害识别系统首页逻辑
+const app = getApp();
 Page({
   data: {
     title: '农业病虫害识别系统',
@@ -264,6 +265,10 @@ Page({
 
   // 首页立即识别按钮点击事件
   navigateToIdentify: function() {
+    // 检查登录状态
+    if (!this.checkLoginStatus()) {
+      return;
+    }
     // 显示操作选项
     wx.showActionSheet({
       itemList: ['拍照识别', '从相册选择'],
@@ -281,6 +286,10 @@ Page({
 
   // 跳转到知识库页面
   navigateToKnowledge: function() {
+    // 检查登录状态
+    if (!this.checkLoginStatus()) {
+      return;
+    }
     // 检查页面是否存在，如果不存在可以提示用户
     console.log('跳转到知识库页面');
     wx.navigateTo({
@@ -297,6 +306,10 @@ Page({
 
   // 跳转到历史记录页面
   navigateToHistory: function() {
+    // 检查登录状态
+    if (!this.checkLoginStatus()) {
+      return;
+    }
     console.log('跳转到历史记录页面');
     wx.navigateTo({
       url: '/pages/history/index',
@@ -323,6 +336,27 @@ Page({
         });
       }
     });
+  },
+
+  // 检查登录状态
+  checkLoginStatus: function() {
+    if (!app.isAuthenticated()) {
+      wx.showModal({
+        title: '请先登录',
+        content: '使用该功能需要先登录',
+        confirmText: '去登录',
+        cancelText: '暂不登录',
+        success: (res) => {
+          if (res.confirm) {
+            wx.navigateTo({
+              url: '/pages/login/index'
+            });
+          }
+        }
+      });
+      return false;
+    }
+    return true;
   },
 
   // 点击资讯条目

@@ -1,8 +1,13 @@
 // 识别页面逻辑
+// 导入识别服务
+const identifyService = require('../../services/identify');
+
 Page({
   data: {
     loading: false,
-    result: null
+    result: null,
+    imageTempPath: '',
+    showResult: false
   },
 
   onLoad: function() {
@@ -119,21 +124,63 @@ Page({
   // 执行选择图片操作，支持相机和相册
   performChooseMedia: function(sourceType) {
     const that = this;
-    that.setData({ loading: true });
+    that.setData({ loading: true, showResult: false });
     
     wx.chooseMedia({
       count: 1,
       mediaType: ['image'],
       sourceType: [sourceType],
+      sizeType: ['compressed'], // 选择压缩图片以减少上传时间
       success(res) {
         console.log(sourceType === 'camera' ? '拍照成功' : '选择图片成功', res);
-        // 模拟识别过程
-        setTimeout(() => {
-          that.setData({
-            loading: false,
-            result: '识别中...'
+        
+        // 保存图片临时路径
+        const tempFilePath = res.tempFiles[0].tempFilePath;
+        that.setData({ imageTempPath: tempFilePath });
+        
+        // 显示加载提示
+        wx.showLoading({
+          title: '正在识别...',
+        });
+        
+        // 调用识别服务进行识别
+        identifyService.identifyByImage(tempFilePath)
+          .then(result => {
+            wx.hideLoading();
+            that.setData({ loading: false });
+            
+            if (result.success) {
+              // 识别成功，显示结果
+              that.setData({
+                result: result.data,
+                showResult: true
+              });
+              
+              // 显示成功提示
+              wx.showToast({
+                title: '识别成功',
+                icon: 'success',
+                duration: 2000
+              });
+            } else {
+              // 识别失败
+              wx.showToast({
+                title: result.message || '识别失败',
+                icon: 'error',
+                duration: 2000
+              });
+            }
+          })
+          .catch(error => {
+            wx.hideLoading();
+            that.setData({ loading: false });
+            console.error('识别过程中发生错误:', error);
+            wx.showToast({
+              title: '识别失败，请稍后重试',
+              icon: 'error',
+              duration: 2000
+            });
           });
-        }, 1000);
       },
       fail(err) {
         console.error(sourceType === 'camera' ? '拍照失败' : '选择图片失败', err);
@@ -145,6 +192,84 @@ Page({
           duration: 2000
         });
       }
+    });
+  },
+  
+  // 保存识别结果
+  saveResult: function() {
+    const that = this;
+    const recordId = that.data.result?.recordId;
+    
+    if (!recordId) {
+      wx.showToast({
+        title: '无法保存结果',
+        icon: 'error',
+        duration: 2000
+      });
+      return;
+    }
+    
+    // 显示加载提示
+    wx.showLoading({
+      title: '保存中...',
+    });
+    
+    // 调用保存接口
+    identifyService.saveIdentifyResult(recordId, true)
+      .then(result => {
+        wx.hideLoading();
+        
+        if (result.success) {
+          wx.showToast({
+            title: '保存成功',
+            icon: 'success',
+            duration: 2000
+          });
+        } else {
+          wx.showToast({
+            title: result.message || '保存失败',
+            icon: 'error',
+            duration: 2000
+          });
+        }
+      })
+      .catch(error => {
+        wx.hideLoading();
+        console.error('保存结果失败:', error);
+        wx.showToast({
+          title: '保存失败，请稍后重试',
+          icon: 'error',
+          duration: 2000
+        });
+      });
+  },
+  
+  // 查看详情
+  viewDiseaseDetail: function() {
+    const that = this;
+    const diseaseId = that.data.result?.id;
+    
+    if (!diseaseId) {
+      wx.showToast({
+        title: '无法获取详情',
+        icon: 'error',
+        duration: 2000
+      });
+      return;
+    }
+    
+    // 导航到详情页
+    wx.navigateTo({
+      url: `/pages/disease/detail?id=${diseaseId}`
+    });
+  },
+  
+  // 重新识别
+  reIdentify: function() {
+    this.setData({
+      result: null,
+      showResult: false,
+      imageTempPath: ''
     });
   }
 });

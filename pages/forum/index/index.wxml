@@ -1,58 +1,121 @@
 <view class="forum-container">
+  <!-- 顶部导航 -->
   <view class="forum-header">
-    <text class="forum-title">农业论坛</text>
-    <button class="post-btn" bindtap="goToPost">发布</button>
+    <view class="header-left">
+      <text class="forum-title">🌱 农业论坛</text>
+      <text class="forum-subtitle">智慧农业 · 绿色未来</text>
+    </view>
+    <view class="post-btn" bindtap="goToPost">
+      <text class="plus-icon">✏️</text>
+      <text>发布</text>
+    </view>
   </view>
   
+  <!-- 分类标签 -->
   <view class="forum-tabs">
-    <view class="tab-item {{currentTab === 'recommend' ? 'active' : ''}}" bindtap="switchTab" data-tab="recommend">推荐</view>
-    <view class="tab-item {{currentTab === 'latest' ? 'active' : ''}}" bindtap="switchTab" data-tab="latest">最新</view>
-    <view class="tab-item {{currentTab === 'hot' ? 'active' : ''}}" bindtap="switchTab" data-tab="hot">热门</view>
+    <scroll-view class="tabs-scroll" scroll-x>
+      <view class="tabs-container">
+        <view class="tab-item {{currentTab === 'recommend' ? 'active' : ''}}" bindtap="switchTab" data-tab="recommend">
+          <text class="tab-icon">⭐</text>
+          <text>推荐</text>
+        </view>
+        <view class="tab-item {{currentTab === 'latest' ? 'active' : ''}}" bindtap="switchTab" data-tab="latest">
+          <text class="tab-icon">🔥</text>
+          <text>最新</text>
+        </view>
+        <view class="tab-item {{currentTab === 'hot' ? 'active' : ''}}" bindtap="switchTab" data-tab="hot">
+          <text class="tab-icon">📈</text>
+          <text>热门</text>
+        </view>
+        <view class="tab-item" bindtap="switchTab" data-tab="question">
+          <text class="tab-icon">❓</text>
+          <text>问答</text>
+        </view>
+        <view class="tab-item" bindtap="switchTab" data-tab="experience">
+          <text class="tab-icon">💡</text>
+          <text>经验</text>
+        </view>
+      </view>
+    </scroll-view>
   </view>
   
-  <view class="forum-list">
+  <!-- 帖子列表 -->
+  <scroll-view class="forum-list" scroll-y="true" enable-back-to-top="true">
     <block wx:for="{{forumList}}" wx:key="id">
-      <view class="post-item" bindtap="goToDetail" data-id="{{item.id}}">
+      <view class="post-card" bindtap="goToDetail" data-id="{{item.id}}">
+        <!-- 用户信息区域 -->
         <view class="post-header">
-          <image class="avatar" src="{{item.avatar || '/static/icons/default-avatar.png'}}" mode="aspectFill"></image>
+          <view class="avatar-wrapper">
+            <image class="avatar" src="{{item.avatar || '/static/icons/default-avatar.png'}}" mode="aspectFill"></image>
+            <view class="online-status" wx:if="{{item.isOnline}}"></view>
+          </view>
           <view class="user-info">
-            <text class="username">{{item.username}}</text>
-            <text class="post-time">{{item.time}}</text>
+            <view class="username-row">
+              <text class="username">{{item.username}}</text>
+              <view class="user-level" wx:if="{{item.level}}">Lv.{{item.level}}</view>
+            </view>
+            <view class="post-meta">
+              <text class="post-time">{{item.time}}</text>
+              <text class="location" wx:if="{{item.location}}">📍 {{item.location}}</text>
+            </view>
           </view>
+          <view class="follow-btn" wx:if="{{!item.isFollowed}}" bindtap="followUser" data-id="{{item.id}}">关注</view>
         </view>
+        
+        <!-- 内容区域 -->
         <view class="post-content">
-          <text class="post-title">{{item.title}}</text>
+          <view class="post-title-row">
+            <text class="post-title">{{item.title}}</text>
+            <view class="hot-badge" wx:if="{{item.isHot}}">🔥 热门</view>
+          </view>
           <text class="post-text">{{item.content}}</text>
+          
+          <!-- 图片展示 -->
           <view class="post-images" wx:if="{{item.images && item.images.length > 0}}">
-            <image wx:for="{{item.images}}" wx:key="*this" wx:for-item="img" src="{{img}}" mode="aspectFill" class="post-img"></image>
+            <view class="image-wrapper {{item.images.length === 1 ? 'single-image' : ''}}" wx:for="{{item.images}}" wx:key="*this" wx:for-item="img" wx:for-index="imgIndex">
+              <image src="{{img}}" mode="aspectFill" class="post-img" bindtap="previewImage" data-url="{{img}}"></image>
+              <view class="image-count" wx:if="{{imgIndex === 0 && item.images.length > 3}}">
+                +{{item.images.length - 3}}
+              </view>
+            </view>
           </view>
         </view>
+        
+        <!-- 底部操作栏 -->
         <view class="post-footer">
-          <view class="post-tag">{{item.category}}</view>
-          <view class="post-stats">
-            <view class="stat-item">
-              <image src="/static/icons/like.png" class="stat-icon"></image>
-              <text class="stat-text">{{item.likes}}</text>
+          <view class="post-tags">
+            <view class="post-tag">{{item.category}}</view>
+            <view class="post-tag secondary" wx:if="{{item.subCategory}}">{{item.subCategory}}</view>
+          </view>
+          <view class="post-actions">
+            <view class="action-item" bindtap="toggleLike" data-id="{{item.id}}">
+              <text class="action-icon {{item.isLiked ? 'liked' : ''}}">❤️</text>
+              <text class="action-text">{{item.likes}}</text>
             </view>
-            <view class="stat-item">
-              <image src="/static/icons/comment.png" class="stat-icon"></image>
-              <text class="stat-text">{{item.comments}}</text>
+            <view class="action-item" bindtap="goToDetail" data-id="{{item.id}}">
+              <text class="action-icon">💬</text>
+              <text class="action-text">{{item.comments}}</text>
             </view>
-            <view class="stat-item">
-              <image src="/static/icons/view.png" class="stat-icon"></image>
-              <text class="stat-text">{{item.views}}</text>
+            <view class="action-item" bindtap="share" data-id="{{item.id}}">
+              <text class="action-icon">🔗</text>
+              <text class="action-text">分享</text>
             </view>
           </view>
         </view>
       </view>
     </block>
     
-    <view class="no-more" wx:if="{{forumList.length === 0}}">
-      <text>暂无帖子</text>
+    <!-- 空状态 -->
+    <view class="empty-state" wx:if="{{forumList.length === 0}}">
+      <text class="empty-icon">🌾</text>
+      <text class="empty-text">暂无相关帖子</text>
+      <text class="empty-subtitle">成为第一个分享农业经验的人吧！</text>
     </view>
-  </view>
-  
-  <view class="load-more" bindtap="loadMore" wx:if="{{hasMore}}">
-    <text>加载更多</text>
-  </view>
+    
+    <!-- 加载更多 -->
+    <view class="load-more" bindtap="loadMore" wx:if="{{hasMore}}">
+      <view class="loading-spinner"></view>
+      <text>加载更多精彩内容...</text>
+    </view>
+  </scroll-view>
 </view>

@@ -1,4 +1,5 @@
 // pages/settings/index.js
+const app = getApp();
 Page({
   /**
    * 页面的初始数据
@@ -40,12 +41,37 @@ Page({
    */
   getUserInfo: function() {
     try {
-      const userInfo = wx.getStorageSync('userInfo');
-      if (userInfo) {
+      // 优先从app全局数据获取用户信息
+      const appUserInfo = app.getCurrentUser();
+      const isLoggedIn = app.isAuthenticated();
+      
+      if (isLoggedIn && appUserInfo) {
+        // 格式化用户信息显示
+        const displayInfo = {
+          username: appUserInfo.user_metadata?.name || '微信用户',
+          identity: '普通用户', // 可以根据实际业务逻辑设置用户角色
+          avatar: appUserInfo.user_metadata?.avatar_url
+        };
+        
         this.setData({
-          userInfo: userInfo,
+          userInfo: displayInfo,
           isLoggedIn: true
         });
+      } else {
+        // 尝试从本地存储获取
+        const storageUserInfo = wx.getStorageSync(app.STORAGE_KEYS.USER_INFO);
+        if (storageUserInfo) {
+          const displayInfo = {
+            username: storageUserInfo.user_metadata?.name || '微信用户',
+            identity: '普通用户',
+            avatar: storageUserInfo.user_metadata?.avatar_url
+          };
+          
+          this.setData({
+            userInfo: displayInfo,
+            isLoggedIn: true
+          });
+        }
       }
     } catch (e) {
       console.error('获取用户信息失败:', e);
@@ -222,14 +248,15 @@ Page({
       success: (res) => {
         if (res.confirm) {
           try {
-            // 清除用户信息
-            wx.removeStorageSync('userInfo');
+            // 调用app的登出方法
+            app.logout();
             
             // 更新页面状态
             this.setData({
               userInfo: {
                 username: '',
-                identity: ''
+                identity: '',
+                avatar: null
               },
               isLoggedIn: false
             });
@@ -258,10 +285,10 @@ Page({
   handleLogin: function() {
     try {
       wx.navigateTo({
-        url: '/pages/login/login',
+        url: '/pages/login/index',
         fail: () => {
           wx.showToast({
-            title: '登录功能开发中',
+            title: '打开登录页面失败',
             icon: 'none',
             duration: 2000
           });
@@ -270,7 +297,7 @@ Page({
     } catch (e) {
       console.error('打开登录页面失败:', e);
       wx.showToast({
-        title: '登录功能开发中',
+        title: '打开登录页面失败',
         icon: 'none',
         duration: 2000
       });

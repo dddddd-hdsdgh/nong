@@ -1,28 +1,24 @@
 // 论坛相关的服务接口
-const BASE_URL = 'https://api.example.com'; // 模拟API地址
+// 导入Supabase服务
+const { db } = require('./supabase');
 
-// 模拟网络延迟
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
-// 生成随机时间
-const getRandomTime = () => {
+// 格式化时间显示
+const formatTime = (timestamp) => {
   const now = new Date();
-  const randomDays = Math.floor(Math.random() * 7);
-  const randomHours = Math.floor(Math.random() * 24);
-  const randomMinutes = Math.floor(Math.random() * 60);
+  const postTime = new Date(timestamp);
+  const diffMs = now - postTime;
+  const diffMinutes = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMinutes / 60);
+  const diffDays = Math.floor(diffHours / 24);
   
-  const time = new Date(now.getTime() - randomDays * 24 * 60 * 60 * 1000 - randomHours * 60 * 60 * 1000 - randomMinutes * 60 * 1000);
-  
-  if (randomDays === 0) {
-    if (randomHours === 0) {
-      return randomMinutes + '分钟前';
-    } else {
-      return randomHours + '小时前';
-    }
-  } else if (randomDays === 1) {
-    return '昨天 ' + time.getHours().toString().padStart(2, '0') + ':' + time.getMinutes().toString().padStart(2, '0');
+  if (diffMinutes < 60) {
+    return diffMinutes + '分钟前';
+  } else if (diffHours < 24) {
+    return diffHours + '小时前';
+  } else if (diffDays === 1) {
+    return '昨天 ' + postTime.getHours().toString().padStart(2, '0') + ':' + postTime.getMinutes().toString().padStart(2, '0');
   } else {
-    return (time.getMonth() + 1) + '-' + time.getDate() + ' ' + time.getHours().toString().padStart(2, '0') + ':' + time.getMinutes().toString().padStart(2, '0');
+    return (postTime.getMonth() + 1) + '-' + postTime.getDate() + ' ' + postTime.getHours().toString().padStart(2, '0') + ':' + postTime.getMinutes().toString().padStart(2, '0');
   }
 };
 
@@ -31,80 +27,55 @@ const forumService = {
   // 获取论坛帖子列表
   async getForumList(params = {}) {
     try {
-      // 在实际应用中，这里应该是真实的API调用
-      // const response = await wx.request({
-      //   url: `${BASE_URL}/forum/list`,
-      //   data: params
-      // });
-      // return response.data;
+      const { page = 1, pageSize = 10, tab = 'recommend', category = '' } = params;
       
-      // 模拟API调用
-      await delay(800);
+      // 构建查询参数
+      const query = {
+        limit: pageSize,
+        offset: (page - 1) * pageSize,
+        order: 'created_at.desc'
+      };
       
-      const { page = 1, pageSize = 10, tab = 'recommend' } = params;
-      const categories = ['种植技术', '病虫害防治', '农产品销售', '经验分享', '政策咨询'];
-      const titles = [
-        '如何有效防治水稻纹枯病？',
-        '今年玉米产量提高的小技巧',
-        '草莓种植的最佳时间和方法',
-        '蔬菜大棚温度管理经验分享',
-        '新型农药使用注意事项',
-        '果树嫁接技术详解',
-        '农产品电商销售渠道推荐',
-        '有机肥与化肥的科学搭配'
-      ];
-      const contents = [
-        '最近田里的水稻出现了纹枯病的症状，叶子上有褐色斑点，请问有什么有效的防治方法吗？已经尝试了几种农药，但效果不太理想...',
-        '经过几年的试验，我总结了几点提高玉米产量的经验，包括合理密植、科学施肥和病虫害防治等方面，希望能帮助到大家...',
-        '草莓种植需要注意温度、湿度和光照等因素，下面我来详细分享一下我的种植经验和技巧...',
-        '大棚蔬菜种植中，温度管理是关键。不同的蔬菜对温度有不同的要求，如何科学调控温度呢？',
-        '使用新型农药时，一定要注意使用方法和安全间隔期，避免对环境和人体造成危害...'
-      ];
-
-      const data = [];
-      const startIndex = (page - 1) * pageSize;
-      
-      for (let i = 0; i < pageSize; i++) {
-        const index = (startIndex + i) % titles.length;
-        data.push({
-          id: 'post_' + (startIndex + i + 1),
-          title: titles[index],
-          content: contents[i % contents.length],
-          username: '用户' + Math.floor(Math.random() * 10000),
-          avatar: '',
-          time: getRandomTime(),
-          category: categories[Math.floor(Math.random() * categories.length)],
-          likes: Math.floor(Math.random() * 1000),
-          comments: Math.floor(Math.random() * 200),
-          views: Math.floor(Math.random() * 5000),
-          images: i % 3 === 0 ? [
-            '/static/icons/forum1.png',
-            '/static/icons/forum2.png'
-          ] : []
-        });
+      // 根据标签类型调整排序
+      if (tab === 'hot') {
+        query.order = 'hot_score.desc';
       }
-
-      // 模拟排序逻辑
-      if (tab === 'latest') {
-        data.sort((a, b) => {
-          // 简化的时间排序逻辑
-          return b.time.localeCompare(a.time);
-        });
-      } else if (tab === 'hot') {
-        data.sort((a, b) => {
-          // 综合热度排序
-          const hotScoreA = a.likes * 2 + a.comments * 3 + a.views * 0.1;
-          const hotScoreB = b.likes * 2 + b.comments * 3 + b.views * 0.1;
-          return hotScoreB - hotScoreA;
-        });
+      
+      // 添加分类筛选
+      if (category) {
+        query.category = category;
       }
+      
+      // 从Supabase获取数据
+      const posts = await db.select('forum_posts', query);
+      
+      // 获取总条数
+      const totalResponse = await db.select('forum_posts', {
+        select: 'count(*)' + (category ? '&category=' + category : '')
+      });
+      const total = totalResponse[0]?.count || 0;
+      
+      // 格式化数据
+      const formattedPosts = posts.map(post => ({
+        id: post.id,
+        title: post.title,
+        content: post.content.substring(0, 100) + '...', // 截取内容预览
+        username: post.username,
+        avatar: post.avatar_url || '',
+        time: formatTime(post.created_at),
+        category: post.category,
+        likes: post.likes_count || 0,
+        comments: post.comments_count || 0,
+        views: post.views_count || 0,
+        images: post.images || []
+      }));
 
       return {
         success: true,
         data: {
-          list: data,
-          hasMore: page < 3,
-          total: 25 // 模拟总条数
+          list: formattedPosts,
+          hasMore: (page - 1) * pageSize + formattedPosts.length < total,
+          total: parseInt(total)
         }
       };
     } catch (error) {
@@ -119,51 +90,54 @@ const forumService = {
   // 获取帖子详情
   async getPostDetail(postId) {
     try {
-      // 在实际应用中，这里应该是真实的API调用
-      // const response = await wx.request({
-      //   url: `${BASE_URL}/forum/detail/${postId}`
-      // });
-      // return response.data;
+      // 从Supabase获取帖子详情
+      const post = await db.select('forum_posts', { id: postId });
       
-      // 模拟API调用
-      await delay(600);
+      if (!post || post.length === 0) {
+        throw new Error('帖子不存在');
+      }
       
-      const titles = [
-        '如何有效防治水稻纹枯病？',
-        '今年玉米产量提高的小技巧',
-        '草莓种植的最佳时间和方法',
-        '蔬菜大棚温度管理经验分享',
-        '新型农药使用注意事项'
-      ];
-      const contents = [
-        '最近田里的水稻出现了纹枯病的症状，叶子上有褐色斑点，请问有什么有效的防治方法吗？已经尝试了几种农药，但效果不太理想。\n\n症状表现：\n1. 叶子上出现水渍状褐色斑点\n2. 严重时叶片枯死\n3. 茎部也出现类似症状\n\n已经使用过的农药：\n- 井冈霉素\n- 三唑酮\n\n希望有经验的朋友能分享一下防治方法，谢谢！',
-        '经过几年的试验，我总结了几点提高玉米产量的经验，希望能帮助到大家：\n\n1. 选择优质种子：选择抗病性强、产量高的品种\n2. 合理密植：根据品种特性确定种植密度\n3. 科学施肥：\n   - 底肥：有机肥为主，配合适量化肥\n   - 追肥：在大喇叭口期重施氮肥\n4. 病虫害防治：\n   - 玉米螟：在心叶期撒施颗粒剂\n   - 玉米蚜：及时喷洒吡虫啉\n5. 适时收获：在籽粒乳线消失时收获\n\n去年我采用这些方法，亩产提高了15%左右。',
-        '草莓种植需要注意温度、湿度和光照等因素，下面我来详细分享一下我的种植经验和技巧：\n\n一、种植时间\n- 温室种植：9月下旬至10月上旬\n- 露地种植：8月下旬至9月上旬\n\n二、土壤准备\n- 选择疏松肥沃的沙壤土\n- pH值5.5-6.5\n- 每亩施入腐熟有机肥5000公斤\n\n三、定植技术\n- 行距30-40厘米，株距20-25厘米\n- 定植深度：苗心与土面平齐\n- 定植后及时浇水\n\n四、田间管理\n- 温度：白天20-25℃，夜间8-10℃\n- 湿度：60%-70%\n- 光照：每天10-12小时\n\n五、病虫害防治\n- 灰霉病：用腐霉利防治\n- 蚜虫：用吡虫啉防治\n\n六、采收\n- 果实全红时采收\n- 每天或隔天采收一次'
-      ];
-      const categories = ['种植技术', '病虫害防治', '农产品销售', '经验分享', '政策咨询'];
+      const postData = post[0];
       
-      const randomIndex = Math.floor(Math.random() * titles.length);
+      // 增加浏览次数
+      await db.update('forum_posts', postId, {
+        views_count: (postData.views_count || 0) + 1
+      });
+      
+      // 获取当前用户是否点赞、收藏、关注
+      const userId = wx.getStorageSync('userId') || 'guest';
+      const likesResponse = await db.select('forum_likes', {
+        post_id: postId,
+        user_id: userId
+      });
+      
+      const collectionsResponse = await db.select('forum_collections', {
+        post_id: postId,
+        user_id: userId
+      });
+      
+      const followsResponse = await db.select('user_follows', {
+        followed_id: postData.user_id,
+        follower_id: userId
+      });
       
       return {
         success: true,
         data: {
-          id: postId,
-          title: titles[randomIndex],
-          content: contents[randomIndex],
-          username: '农业专家' + Math.floor(Math.random() * 100),
-          avatar: '',
-          time: '2小时前',
-          category: categories[Math.floor(Math.random() * categories.length)],
-          likes: Math.floor(Math.random() * 1000),
-          comments: Math.floor(Math.random() * 100),
-          views: Math.floor(Math.random() * 5000),
-          images: [
-            '/static/icons/forum1.png',
-            '/static/icons/forum2.png'
-          ],
-          isLiked: false,
-          isCollected: false,
-          isFollowed: false
+          id: postData.id,
+          title: postData.title,
+          content: postData.content,
+          username: postData.username,
+          avatar: postData.avatar_url || '',
+          time: formatTime(postData.created_at),
+          category: postData.category,
+          likes: postData.likes_count || 0,
+          comments: postData.comments_count || 0,
+          views: (postData.views_count || 0) + 1,
+          images: postData.images || [],
+          isLiked: likesResponse.length > 0,
+          isCollected: collectionsResponse.length > 0,
+          isFollowed: followsResponse.length > 0
         }
       };
     } catch (error) {
@@ -178,76 +152,54 @@ const forumService = {
   // 获取帖子评论
   async getComments(postId, params = {}) {
     try {
-      // 在实际应用中，这里应该是真实的API调用
-      // const response = await wx.request({
-      //   url: `${BASE_URL}/forum/comments/${postId}`,
-      //   data: params
-      // });
-      // return response.data;
-      
-      // 模拟API调用
-      await delay(500);
-      
       const { page = 1, pageSize = 10 } = params;
-      const comments = [
-        {
-          id: 'comment_1',
-          content: '非常实用的分享，我今年也要试试这些方法！',
-          username: '农民小李',
-          avatar: '',
-          time: '1小时前',
-          likes: 23,
-          isLiked: false
-        },
-        {
-          id: 'comment_2',
-          content: '补充一点：在病虫害防治方面，我建议使用生物农药，更加环保安全。',
-          username: '绿色农业',
-          avatar: '',
-          time: '3小时前',
-          likes: 45,
-          isLiked: false
-        },
-        {
-          id: 'comment_3',
-          content: '我按照这些方法试了，确实有效！产量提高了不少。',
-          username: '实践者',
-          avatar: '',
-          time: '昨天',
-          likes: 18,
-          isLiked: false
-        },
-        {
-          id: 'comment_4',
-          content: '请问施肥的具体用量是多少？能详细说一下吗？',
-          username: '新手提问',
-          avatar: '',
-          time: '2天前',
-          likes: 5,
-          isLiked: false
-        },
-        {
-          id: 'comment_5',
-          content: '感谢分享！很有帮助。',
-          username: '感谢者',
-          avatar: '',
-          time: '3天前',
-          likes: 12,
-          isLiked: false
-        }
-      ];
       
-      // 模拟分页
-      const startIndex = (page - 1) * pageSize;
-      const endIndex = startIndex + pageSize;
-      const paginatedComments = comments.slice(startIndex, endIndex);
+      // 构建查询参数
+      const query = {
+        post_id: postId,
+        limit: pageSize,
+        offset: (page - 1) * pageSize,
+        order: 'created_at.desc'
+      };
+      
+      // 从Supabase获取评论数据
+      const comments = await db.select('forum_comments', query);
+      
+      // 获取总评论数
+      const totalResponse = await db.select('forum_comments', {
+        select: 'count(*)',
+        post_id: postId
+      });
+      const total = totalResponse[0]?.count || 0;
+      
+      // 获取当前用户点赞信息
+      const userId = wx.getStorageSync('userId') || 'guest';
+      const commentIds = comments.map(comment => comment.id);
+      const likesResponse = await db.select('comment_likes', {
+        comment_id: commentIds,
+        user_id: userId
+      });
+      
+      const likedCommentIds = likesResponse.map(like => like.comment_id);
+      
+      // 格式化评论数据
+      const formattedComments = comments.map(comment => ({
+        id: comment.id,
+        content: comment.content,
+        username: comment.username,
+        avatar: comment.avatar_url || '',
+        time: formatTime(comment.created_at),
+        likes: comment.likes_count || 0,
+        isLiked: likedCommentIds.includes(comment.id),
+        replyTo: comment.reply_to || ''
+      }));
       
       return {
         success: true,
         data: {
-          list: paginatedComments,
-          hasMore: page < 2,
-          total: comments.length
+          list: formattedComments,
+          hasMore: (page - 1) * pageSize + formattedComments.length < total,
+          total: parseInt(total)
         }
       };
     } catch (error) {
@@ -262,28 +214,43 @@ const forumService = {
   // 发布评论
   async postComment(postId, content, replyTo = '') {
     try {
-      // 在实际应用中，这里应该是真实的API调用
-      // const response = await wx.request({
-      //   url: `${BASE_URL}/forum/comment`,
-      //   method: 'POST',
-      //   data: {
-      //     postId,
-      //     content,
-      //     replyTo
-      //   }
-      // });
-      // return response.data;
+      const userId = wx.getStorageSync('userId');
+      const userInfo = wx.getStorageSync('userInfo');
       
-      // 模拟API调用
-      await delay(500);
+      if (!userId) {
+        throw new Error('用户未登录');
+      }
+      
+      // 创建评论数据
+      const commentData = {
+        post_id: postId,
+        user_id: userId,
+        content: content,
+        reply_to: replyTo,
+        username: userInfo?.nickName || '用户' + userId,
+        avatar_url: userInfo?.avatarUrl || '',
+        likes_count: 0,
+        created_at: new Date().toISOString()
+      };
+      
+      // 插入评论到数据库
+      const result = await db.insert('forum_comments', commentData);
+      
+      // 更新帖子评论数
+      const post = await db.select('forum_posts', { id: postId });
+      if (post && post.length > 0) {
+        await db.update('forum_posts', postId, {
+          comments_count: (post[0].comments_count || 0) + 1
+        });
+      }
       
       return {
         success: true,
         data: {
-          id: 'comment_' + Date.now(),
+          id: result.id || 'comment_' + Date.now(),
           content: content,
-          username: '当前用户',
-          avatar: '',
+          username: commentData.username,
+          avatar: commentData.avatar_url,
           time: '刚刚',
           likes: 0,
           isLiked: false
@@ -301,21 +268,54 @@ const forumService = {
   // 点赞帖子
   async likePost(postId) {
     try {
-      // 在实际应用中，这里应该是真实的API调用
-      // const response = await wx.request({
-      //   url: `${BASE_URL}/forum/like`,
-      //   method: 'POST',
-      //   data: { postId }
-      // });
-      // return response.data;
+      const userId = wx.getStorageSync('userId');
       
-      // 模拟API调用
-      await delay(300);
+      if (!userId) {
+        throw new Error('用户未登录');
+      }
+      
+      // 检查是否已点赞
+      const existingLike = await db.select('forum_likes', {
+        post_id: postId,
+        user_id: userId
+      });
+      
+      let liked = false;
+      
+      if (existingLike && existingLike.length > 0) {
+        // 已点赞，取消点赞
+        await db.delete('forum_likes', existingLike[0].id);
+        
+        // 更新帖子点赞数
+        const post = await db.select('forum_posts', { id: postId });
+        if (post && post.length > 0) {
+          await db.update('forum_posts', postId, {
+            likes_count: Math.max(0, (post[0].likes_count || 0) - 1)
+          });
+        }
+      } else {
+        // 未点赞，添加点赞
+        await db.insert('forum_likes', {
+          post_id: postId,
+          user_id: userId,
+          created_at: new Date().toISOString()
+        });
+        
+        // 更新帖子点赞数
+        const post = await db.select('forum_posts', { id: postId });
+        if (post && post.length > 0) {
+          await db.update('forum_posts', postId, {
+            likes_count: (post[0].likes_count || 0) + 1
+          });
+        }
+        
+        liked = true;
+      }
       
       return {
         success: true,
         data: {
-          liked: true
+          liked: liked
         }
       };
     } catch (error) {
@@ -330,21 +330,37 @@ const forumService = {
   // 收藏帖子
   async collectPost(postId) {
     try {
-      // 在实际应用中，这里应该是真实的API调用
-      // const response = await wx.request({
-      //   url: `${BASE_URL}/forum/collect`,
-      //   method: 'POST',
-      //   data: { postId }
-      // });
-      // return response.data;
+      const userId = wx.getStorageSync('userId');
       
-      // 模拟API调用
-      await delay(300);
+      if (!userId) {
+        throw new Error('用户未登录');
+      }
+      
+      // 检查是否已收藏
+      const existingCollection = await db.select('forum_collections', {
+        post_id: postId,
+        user_id: userId
+      });
+      
+      let collected = false;
+      
+      if (existingCollection && existingCollection.length > 0) {
+        // 已收藏，取消收藏
+        await db.delete('forum_collections', existingCollection[0].id);
+      } else {
+        // 未收藏，添加收藏
+        await db.insert('forum_collections', {
+          post_id: postId,
+          user_id: userId,
+          created_at: new Date().toISOString()
+        });
+        collected = true;
+      }
       
       return {
         success: true,
         data: {
-          collected: true
+          collected: collected
         }
       };
     } catch (error) {
@@ -359,21 +375,42 @@ const forumService = {
   // 关注用户
   async followUser(userId) {
     try {
-      // 在实际应用中，这里应该是真实的API调用
-      // const response = await wx.request({
-      //   url: `${BASE_URL}/user/follow`,
-      //   method: 'POST',
-      //   data: { userId }
-      // });
-      // return response.data;
+      const currentUserId = wx.getStorageSync('userId');
       
-      // 模拟API调用
-      await delay(300);
+      if (!currentUserId) {
+        throw new Error('用户未登录');
+      }
+      
+      // 不能关注自己
+      if (currentUserId === userId) {
+        throw new Error('不能关注自己');
+      }
+      
+      // 检查是否已关注
+      const existingFollow = await db.select('user_follows', {
+        followed_id: userId,
+        follower_id: currentUserId
+      });
+      
+      let followed = false;
+      
+      if (existingFollow && existingFollow.length > 0) {
+        // 已关注，取消关注
+        await db.delete('user_follows', existingFollow[0].id);
+      } else {
+        // 未关注，添加关注
+        await db.insert('user_follows', {
+          followed_id: userId,
+          follower_id: currentUserId,
+          created_at: new Date().toISOString()
+        });
+        followed = true;
+      }
       
       return {
         success: true,
         data: {
-          followed: true
+          followed: followed
         }
       };
     } catch (error) {

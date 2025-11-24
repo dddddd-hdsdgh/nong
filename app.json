@@ -4,7 +4,8 @@
     "pages/forum/index/index",
     "pages/forum/detail/index",
     "pages/knowledge/index",
-    "pages/settings/index"
+    "pages/settings/index",
+    "pages/login/index"
   ],
   "window": {
     "backgroundTextStyle": "light",

@@ -1,0 +1,9 @@
+{
+  "navigationBarTitleText": "分类文章",
+  "enablePullDownRefresh": true,
+  "enableReachBottom": true,
+  "backgroundTextStyle": "dark",
+  "navigationBarBackgroundColor": "#ffffff",
+  "navigationBarTextStyle": "black",
+  "usingComponents": {}
+}

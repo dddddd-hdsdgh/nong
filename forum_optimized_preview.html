@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>农业论坛页面优化预览</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'PingFang SC', 'Helvetica Neue', Helvetica, 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 10px;
+        }
+
+        .preview-container {
+            max-width: 414px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .forum-header {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            padding: 30px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+        }
+
+        .header-left {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .forum-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .forum-subtitle {
+            font-size: 12px;
+            opacity: 0.9;
+            font-weight: 300;
+        }
+
+        .post-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .forum-tabs {
+            background-color: white;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            position: relative;
+            z-index: 99;
+        }
+
+        .tabs-container {
+            display: flex;
+            padding: 15px 20px;
+            overflow-x: auto;
+            gap: 10px;
+        }
+
+        .tab-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            background-color: #f8f9fa;
+            border-radius: 25px;
+            font-size: 14px;
+            color: #666;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .tab-item.active {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+        }
+
+        .tab-icon {
+            margin-right: 5px;
+            font-size: 14px;
+        }
+
+        .forum-list {
+            padding: 20px;
+            height: 400px;
+            overflow-y: auto;
+        }
+
+        .post-card {
+            background: white;
+            margin-bottom: 20px;
+            border-radius: 15px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+        }
+
+        .post-header {
+            display: flex;
+            align-items: center;
+            padding: 20px;
+            position: relative;
+        }
+
+        .avatar-wrapper {
+            position: relative;
+            margin-right: 15px;
+        }
+
+        .avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 3px solid #f0f0f0;
+        }
+
+        .online-status {
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            width: 16px;
+            height: 16px;
+            background-color: #4CAF50;
+            border-radius: 50%;
+            border: 2px solid white;
+        }
+
+        .user-info {
+            flex: 1;
+        }
+
+        .username-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .username {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            margin-right: 10px;
+        }
+
+        .user-level {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            color: white;
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+
+        .post-meta {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .post-time {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .location {
+            font-size: 12px;
+            color: #4CAF50;
+        }
+
+        .post-content {
+            padding: 0 20px 15px 20px;
+        }
+
+        .post-title-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            gap: 10px;
+        }
+
+        .post-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            line-height: 1.4;
+            flex: 1;
+        }
+
+        .hot-badge {
+            background: linear-gradient(135deg, #FF6B6B, #FF5252);
+            color: white;
+            font-size: 10px;
+            padding: 4px 8px;
+            border-radius: 10px;
+            white-space: nowrap;
+            font-weight: bold;
+        }
+
+        .post-text {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.7;
+            margin-bottom: 15px;
+            display: -webkit-box;
+            -webkit-line-clamp: 4;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .post-images {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .image-wrapper {
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .image-wrapper:first-child {
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .image-wrapper:not(:first-child) {
+            width: 90px;
+            height: 90px;
+        }
+
+        .post-img {
+            width: 100%;
+            height: 100%;
+            border-radius: 8px;
+        }
+
+        .post-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            border-top: 1px solid #f5f5f5;
+        }
+
+        .post-tags {
+            display: flex;
+            gap: 8px;
+        }
+
+        .post-tag {
+            font-size: 11px;
+            color: #4CAF50;
+            background: linear-gradient(135deg, #E8F5E8, #F0F8F0);
+            padding: 5px 12px;
+            border-radius: 12px;
+            border: 1px solid #4CAF50;
+        }
+
+        .post-tag.secondary {
+            color: #FF9800;
+            background: linear-gradient(135deg, #FFF3E0, #FFF8E1);
+            border-color: #FF9800;
+        }
+
+        .post-actions {
+            display: flex;
+            gap: 20px;
+        }
+
+        .action-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 5px 10px;
+            border-radius: 15px;
+            transition: all 0.2s ease;
+        }
+
+        .action-icon {
+            font-size: 14px;
+        }
+
+        .action-text {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .optimization-features {
+            padding: 20px;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+
+        .optimization-features h3 {
+            color: #4CAF50;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .feature-item {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .feature-icon {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .feature-title {
+            font-size: 12px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .feature-desc {
+            font-size: 10px;
+            color: #666;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+    <div class="preview-container">
+        <!-- 顶部导航 -->
+        <div class="forum-header">
+            <div class="header-left">
+                <div class="forum-title">🌾 农业论坛</div>
+                <div class="forum-subtitle">分享经验，交流技术，共同成长</div>
+            </div>
+            <div class="post-btn">
+                <span class="plus-icon">✏️</span>
+                发布
+            </div>
+        </div>
+
+        <!-- 分类标签 -->
+        <div class="forum-tabs">
+            <div class="tabs-container">
+                <div class="tab-item active">
+                    <span class="tab-icon">🏠</span>全部
+                </div>
+                <div class="tab-item">
+                    <span class="tab-icon">🌱</span>种植技术
+                </div>
+                <div class="tab-item">
+                    <span class="tab-icon">🌾</span>作物管理
+                </div>
+                <div class="tab-item">
+                    <span class="tab-icon">🐛</span>病虫防治
+                </div>
+                <div class="tab-item">
+                    <span class="tab-icon">🚜</span>农机设备
+                </div>
+                <div class="tab-item">
+                    <span class="tab-icon">💰</span>市场行情
+                </div>
+            </div>
+        </div>
+
+        <!-- 帖子列表 -->
+        <div class="forum-list">
+            <!-- 帖子1 -->
+            <div class="post-card">
+                <div class="post-header">
+                    <div class="avatar-wrapper">
+                        <div class="avatar" style="background: linear-gradient(135deg, #4CAF50, #45a049); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">张</div>
+                        <div class="online-status"></div>
+                    </div>
+                    <div class="user-info">
+                        <div class="username-row">
+                            <div class="username">张大哥</div>
+                            <div class="user-level">Lv.5</div>
+                        </div>
+                        <div class="post-meta">
+                            <span class="post-time">2小时前</span>
+                            <span class="location">📍山东</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="post-content">
+                    <div class="post-title-row">
+                        <div class="post-title">春玉米种植管理关键技术分享</div>
+                        <div class="hot-badge">热门</div>
+                    </div>
+                    <div class="post-text">
+                        根据多年的种植经验，春玉米要想高产，必须把握好以下几个关键时期：播种期的选择、苗期的管理、拔节期的追肥以及灌浆期的水分管理。今天重点跟大家分享一下播种期的准备工作...
+                    </div>
+                    <div class="post-images">
+                        <div class="image-wrapper">
+                            <div class="post-img" style="background: linear-gradient(45deg, #8BC34A, #689F38);"></div>
+                        </div>
+                        <div class="image-wrapper">
+                            <div class="post-img" style="background: linear-gradient(45deg, #FF9800, #F57C00);"></div>
+                        </div>
+                        <div class="image-wrapper">
+                            <div class="post-img" style="background: linear-gradient(45deg, #2196F3, #1976D2);"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="post-footer">
+                    <div class="post-tags">
+                        <div class="post-tag">玉米种植</div>
+                        <div class="post-tag secondary">春耕</div>
+                    </div>
+                    <div class="post-actions">
+                        <div class="action-item">
+                            <span class="action-icon">❤️</span>
+                            <span class="action-text">156</span>
+                        </div>
+                        <div class="action-item">
+                            <span class="action-icon">💬</span>
+                            <span class="action-text">42</span>
+                        </div>
+                        <div class="action-item">
+                            <span class="action-icon">📤</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 帖子2 -->
+            <div class="post-card">
+                <div class="post-header">
+                    <div class="avatar-wrapper">
+                        <div class="avatar" style="background: linear-gradient(135deg, #FF9800, #F57C00); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">李</div>
+                    </div>
+                    <div class="user-info">
+                        <div class="username-row">
+                            <div class="username">李师傅</div>
+                            <div class="user-level">Lv.3</div>
+                        </div>
+                        <div class="post-meta">
+                            <span class="post-time">5小时前</span>
+                            <span class="location">📍河南</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="post-content">
+                    <div class="post-title-row">
+                        <div class="post-title">小麦蚜虫防治最佳时机</div>
+                    </div>
+                    <div class="post-text">
+                        最近很多朋友问我小麦蚜虫什么时候防治最好。根据我的经验，在小麦拔节至孕穗期，当蚜虫达到防治指标时（百株蚜量500头以上），就要及时喷药了...
+                    </div>
+                    <div class="post-images">
+                        <div class="image-wrapper">
+                            <div class="post-img" style="background: linear-gradient(45deg, #4CAF50, #388E3C);"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="post-footer">
+                    <div class="post-tags">
+                        <div class="post-tag">小麦</div>
+                        <div class="post-tag secondary">病虫防治</div>
+                    </div>
+                    <div class="post-actions">
+                        <div class="action-item">
+                            <span class="action-icon">❤️</span>
+                            <span class="action-text">89</span>
+                        </div>
+                        <div class="action-item">
+                            <span class="action-icon">💬</span>
+                            <span class="action-text">23</span>
+                        </div>
+                        <div class="action-item">
+                            <span class="action-icon">📤</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 优化特性展示 -->
+        <div class="optimization-features">
+            <h3>🎨 界面优化特性</h3>
+            <div class="features-grid">
+                <div class="feature-item">
+                    <div class="feature-icon">🎨</div>
+                    <div class="feature-title">渐变背景</div>
+                    <div class="feature-desc">现代渐变色彩，提升视觉体验</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">📱</div>
+                    <div class="feature-title">响应式设计</div>
+                    <div class="feature-desc">适配各种屏幕尺寸</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">✨</div>
+                    <div class="feature-title">动画效果</div>
+                    <div class="feature-desc">流畅的交互动画</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">🏷️</div>
+                    <div class="feature-title">视觉标签</div>
+                    <div class="feature-desc">热门标签、等级徽章</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 添加一些交互效果
+        document.querySelectorAll('.tab-item').forEach(tab => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        document.querySelectorAll('.action-item').forEach(action => {
+            action.addEventListener('click', function() {
+                const icon = this.querySelector('.action-icon');
+                if (icon.textContent.includes('❤️')) {
+                    if (icon.classList.contains('liked')) {
+                        icon.textContent = '❤️';
+                        icon.classList.remove('liked');
+                    } else {
+                        icon.textContent = '❤️';
+                        icon.classList.add('liked');
+                    }
+                }
+            });
+        });
+
+        document.querySelectorAll('.post-card').forEach(card => {
+            card.addEventListener('click', function() {
+                this.style.transform = 'translateY(-2px)';
+                setTimeout(() => {
+                    this.style.transform = 'translateY(0)';
+                }, 150);
+            });
+        });
+    </script>
+</body>
+</html>
