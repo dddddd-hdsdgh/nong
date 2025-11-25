@@ -1,0 +1,57 @@
+<!-- 个人信息编辑页面 -->
+<view class="profile-edit-container">
+  <!-- 页面标题 -->
+  <view class="page-header">
+    <view class="header-back" bindtap="cancelEdit">
+      <text class="back-icon">←</text>
+    </view>
+    <view class="header-title">编辑个人信息</view>
+    <view class="header-right"></view>
+  </view>
+  
+  <!-- 编辑表单 -->
+  <view class="edit-form">
+    <!-- 用户名编辑 -->
+    <view class="form-group">
+      <view class="form-label">用户名</view>
+      <view class="form-input-container">
+        <input 
+          class="form-input" 
+          type="text" 
+          placeholder="请输入用户名（2-20个字符）" 
+          value="{{username}}" 
+          bindinput="onUsernameInput"
+          maxlength="20"
+        />
+      </view>
+      <view class="form-tip">用户名只能包含字母、数字、下划线和中文</view>
+    </view>
+    
+    <!-- 错误提示 -->
+    <view wx:if="{{errorMessage}}" class="error-message">{{errorMessage}}</view>
+    
+    <!-- 成功提示 -->
+    <view wx:if="{{successMessage}}" class="success-message">{{successMessage}}</view>
+    
+    <!-- 保存按钮 -->
+    <button 
+      class="save-button" 
+      type="primary" 
+      loading="{{isLoading}}" 
+      disabled="{{isLoading}}" 
+      bindtap="saveUsername"
+    >
+      保存
+    </button>
+    
+    <!-- 取消按钮 -->
+    <button 
+      class="cancel-button" 
+      plain 
+      disabled="{{isLoading}}" 
+      bindtap="cancelEdit"
+    >
+      取消
+    </button>
+  </view>
+</view>

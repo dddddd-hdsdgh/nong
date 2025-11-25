@@ -1,0 +1,127 @@
+/* 个人信息编辑页面样式 */
+.profile-edit-container {
+  background-color: #f8f8f8;
+  min-height: 100vh;
+  padding-bottom: 40rpx;
+}
+
+/* 页面头部 */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #ffffff;
+  height: 120rpx;
+  padding: 0 30rpx;
+  border-bottom: 1rpx solid #e8e8e8;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+}
+
+.header-back {
+  width: 80rpx;
+  height: 80rpx;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.back-icon {
+  font-size: 48rpx;
+  color: #333333;
+}
+
+.header-title {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #333333;
+  flex: 1;
+  text-align: center;
+}
+
+.header-right {
+  width: 80rpx;
+}
+
+/* 编辑表单 */
+.edit-form {
+  margin-top: 140rpx;
+  background-color: #ffffff;
+  padding: 40rpx 30rpx;
+}
+
+.form-group {
+  margin-bottom: 50rpx;
+}
+
+.form-label {
+  font-size: 32rpx;
+  color: #666666;
+  margin-bottom: 20rpx;
+}
+
+.form-input-container {
+  background-color: #f5f5f5;
+  border-radius: 10rpx;
+  padding: 0 30rpx;
+}
+
+.form-input {
+  font-size: 32rpx;
+  color: #333333;
+  height: 96rpx;
+  width: 100%;
+}
+
+.form-tip {
+  font-size: 28rpx;
+  color: #999999;
+  margin-top: 12rpx;
+}
+
+/* 错误提示 */
+.error-message {
+  color: #FF4D4F;
+  font-size: 28rpx;
+  margin-bottom: 30rpx;
+  text-align: center;
+}
+
+/* 成功提示 */
+.success-message {
+  color: #52C41A;
+  font-size: 28rpx;
+  margin-bottom: 30rpx;
+  text-align: center;
+}
+
+/* 按钮样式 */
+.save-button {
+  background-color: #4CAF50;
+  color: #ffffff;
+  font-size: 34rpx;
+  font-weight: 500;
+  height: 96rpx;
+  line-height: 96rpx;
+  border-radius: 10rpx;
+  margin-bottom: 30rpx;
+}
+
+.cancel-button {
+  font-size: 34rpx;
+  color: #666666;
+  height: 96rpx;
+  line-height: 96rpx;
+  border-radius: 10rpx;
+}
+
+/* 响应式设计 */
+@media screen and (min-width: 768px) {
+  .profile-edit-container {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+}

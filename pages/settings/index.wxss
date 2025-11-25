@@ -54,6 +54,19 @@ page {
 .user-role {
   font-size: 28rpx;
   color: #999999;
+  margin-bottom: 8rpx;
+}
+
+.user-email {
+  font-size: 26rpx;
+  color: #4CAF50;
+  margin-bottom: 6rpx;
+  word-break: break-all;
+}
+
+.user-id {
+  font-size: 24rpx;
+  color: #999999;
 }
 
 .user-arrow .arrow-icon,

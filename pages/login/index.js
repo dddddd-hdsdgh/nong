@@ -1,6 +1,8 @@
 // 登录页面逻辑
 // 引入Supabase认证服务
 const { auth } = require('../../services/supabase');
+// 引入登录服务
+const loginService = require('../../services/login');
 const app = getApp();
 
 Page({
@@ -9,7 +11,11 @@ Page({
    */
   data: {
     isLoading: false,
-    errorMessage: ''
+    errorMessage: '',
+    loginType: 'email', // email 或 wechat
+    email: '',
+    password: '',
+    showPassword: false
   },
 
   /**
@@ -26,9 +32,137 @@ Page({
    * 生命周期函数--监听页面显示
    */
   onShow: function() {
-    // 重置错误信息
+    // 重置错误信息和表单数据
     this.setData({
+      errorMessage: '',
+      email: '',
+      password: ''
+    });
+  },
+  
+  /**
+   * 切换到邮箱登录
+   */
+  switchToEmailLogin: function() {
+    this.setData({
+      loginType: 'email',
       errorMessage: ''
+    });
+  },
+  
+  /**
+   * 切换到微信登录
+   */
+  switchToWechatLogin: function() {
+    this.setData({
+      loginType: 'wechat',
+      errorMessage: ''
+    });
+  },
+  
+  /**
+   * 处理邮箱输入
+   */
+  onEmailInput: function(e) {
+    this.setData({
+      email: e.detail.value
+    });
+  },
+  
+  /**
+   * 处理密码输入
+   */
+  onPasswordInput: function(e) {
+    this.setData({
+      password: e.detail.value
+    });
+  },
+  
+  /**
+   * 切换密码可见性
+   */
+  togglePasswordVisibility: function() {
+    this.setData({
+      showPassword: !this.data.showPassword
+    });
+  },
+  
+  /**
+   * 处理邮箱登录
+   */
+  handleEmailLogin: function() {
+    const { email, password } = this.data;
+    
+    // 表单验证
+    if (!email) {
+      this.setData({ errorMessage: '请输入邮箱' });
+      return;
+    }
+    
+    // 验证邮箱格式
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      this.setData({ errorMessage: '邮箱格式不正确' });
+      return;
+    }
+    
+    if (!password) {
+      this.setData({ errorMessage: '请输入密码' });
+      return;
+    }
+    
+    const passwordValidation = loginService.validatePassword(password);
+    if (!passwordValidation.valid) {
+      this.setData({ errorMessage: passwordValidation.message });
+      return;
+    }
+    
+    this.setData({ isLoading: true, errorMessage: '' });
+    
+    // 调用邮箱登录
+    loginService.emailLogin(
+      email,
+      password,
+      (data) => {
+        // 登录成功
+        wx.showToast({
+          title: '登录成功',
+          icon: 'success',
+          duration: 1500
+        });
+        
+        // 延迟跳转到首页
+        setTimeout(() => {
+          this.navigateToHome();
+        }, 1500);
+      },
+      (error) => {
+        // 登录失败
+        this.setData({
+          isLoading: false,
+          errorMessage: error.message || '登录失败，请重试'
+        });
+      }
+    );
+  },
+  
+  /**
+   * 跳转到注册页面
+   */
+  navigateToRegister: function() {
+    wx.navigateTo({
+      url: '/pages/register/index'
+    });
+  },
+  
+  /**
+   * 忘记密码
+   */
+  forgotPassword: function() {
+    wx.showModal({
+      title: '提示',
+      content: '忘记密码功能开发中，敬请期待！',
+      showCancel: false
     });
   },
 

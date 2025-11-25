@@ -59,6 +59,10 @@ function createClient() {
                 app.logout();
                 reject(new Error('登录已过期，请重新登录'));
               });
+            } else if (res.statusCode >= 400) {
+              // 处理其他错误状态码
+              console.error('API请求失败:', res.statusCode, res.data);
+              reject(new Error(res.data?.message || `请求失败: ${res.statusCode}`));
             } else {
               resolve(res.data);
             }
@@ -82,9 +86,29 @@ function createClient() {
      * 发送GET请求
      */
     async get(path, params) {
-      const queryString = params ? '?' + Object.keys(params).map(key => 
-        `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`
-      ).join('&') : '';
+      if (!params || Object.keys(params).length === 0) {
+        return this.fetch(path);
+      }
+      
+      // 构建查询字符串，确保正确编码
+      const queryParts = Object.keys(params).map(key => {
+        const value = params[key];
+        // 对于 Supabase PostgREST，某些操作符（如 eq.）不应该被完全编码
+        // 但值部分需要编码
+        if (typeof value === 'string' && value.includes('.')) {
+          // 处理操作符格式，如 "eq.value"
+          const parts = value.split('.');
+          if (parts.length === 2) {
+            const operator = parts[0]; // eq, neq, gt, etc.
+            const val = parts[1];
+            return `${encodeURIComponent(key)}=${operator}.${encodeURIComponent(val)}`;
+          }
+        }
+        return `${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
+      });
+      
+      const queryString = '?' + queryParts.join('&');
+      console.log('构建的查询URL:', path + queryString);
       return this.fetch(path + queryString);
     },
 
@@ -121,11 +145,82 @@ const db = {
    */
   async select(table, query = {}) {
     try {
-      const response = await supabase.get(`/rest/v1/${table}`, query);
+      // 构建 Supabase PostgREST 风格的查询参数
+      const params = {};
+      
+      // 处理过滤条件（如 category_id=xxx）
+      Object.keys(query).forEach(key => {
+        // 跳过特殊参数
+        if (['limit', 'offset', 'order', 'select'].includes(key)) {
+          return;
+        }
+        
+        const value = query[key];
+        
+        // 检查值是否已经是操作符格式（如 ilike.*keyword*）
+        if (typeof value === 'string' && value.includes('.')) {
+          // 已经是操作符格式，直接使用
+          params[`${key}`] = value;
+        } else {
+          // 使用 eq 操作符进行等值查询
+          // Supabase PostgREST 格式: column=eq.value
+          params[`${key}`] = `eq.${value}`;
+        }
+      });
+      
+      // 添加 limit 和 offset
+      if (query.limit !== undefined) {
+        params.limit = query.limit;
+      }
+      if (query.offset !== undefined) {
+        params.offset = query.offset;
+      }
+      
+      // 添加排序
+      if (query.order) {
+        // order 格式: "column.desc" 或 "column.asc"
+        // Supabase 需要格式: order=column.desc
+        params.order = query.order;
+      }
+      
+      // 添加 select（字段选择）
+      if (query.select) {
+        // select 格式: "id" 或 "id,title,content"
+        params.select = query.select;
+      }
+      
+      console.log('Supabase 查询参数:', params);
+      
+      let response;
+      try {
+        response = await supabase.get(`/rest/v1/${table}`, params);
+      } catch (error) {
+        console.error('Supabase GET 请求失败:', error);
+        return [];
+      }
+      
+      // 确保返回的是数组 - 多重检查
+      if (response === null || response === undefined) {
+        console.warn('Supabase 返回 null 或 undefined');
+        return [];
+      }
+      
+      if (!Array.isArray(response)) {
+        console.warn('Supabase 返回的数据不是数组:', response, typeof response);
+        // 如果返回的是对象，尝试提取数据
+        if (response && typeof response === 'object' && response.data) {
+          if (Array.isArray(response.data)) {
+            return response.data;
+          }
+        }
+        return [];
+      }
+      
       return response;
     } catch (error) {
       console.error('数据库查询失败:', error);
-      throw error;
+      // 返回空数组而不是抛出错误，避免页面崩溃
+      return [];
     }
   },
 
@@ -209,6 +304,116 @@ const storage = {
 
 // 导出认证服务
 const auth = {
+  /**
+   * 邮箱加密码登录
+   * @param {string} email - 邮箱
+   * @param {string} password - 密码
+   * @returns {Promise} 登录结果
+   */
+  async signInWithEmail(email, password) {
+    try {
+      // 使用实际Supabase API调用
+      const response = await supabase.post('/auth/v1/token?grant_type=password', {
+        email: email,
+        password: password
+      });
+
+      if (response.access_token) {
+        // 存储token
+        app.globalData.token = response.access_token;
+        wx.setStorageSync('token', response.access_token);
+        
+        if (response.refresh_token) {
+          wx.setStorageSync('refreshToken', response.refresh_token);
+        }
+
+        // 更新用户信息
+        const userInfo = {
+          user_id: response.user.id,
+          name: response.user.user_metadata?.name || '用户',
+          avatar_url: response.user.user_metadata?.avatar_url,
+          email: response.user.email
+        };
+        
+        app.updateLoginStatus(userInfo, response.access_token, userInfo.user_id);
+        
+        return { success: true, data: response };
+      }
+      
+      return { success: false, error: response.error || '登录失败' };
+      
+      /* 模拟数据（已注释，使用实际API调用）
+      return Promise.resolve({
+        success: true,
+        data: {
+          access_token: 'mock_token_' + Math.random().toString(36).substring(2, 20),
+          refresh_token: 'mock_refresh_token_' + Math.random().toString(36).substring(2, 20),
+          user: {
+            id: 'user_' + Math.floor(Math.random() * 1000000),
+            email: email,
+            user_metadata: {
+              name: '用户',
+              avatar_url: 'https://thirdwx.qlogo.cn/mmopen/vi_32/Q0j4TwGTfTK5F62eGpibIcMia1ibkE8lV3Bc7P9icWk9p27gYibWbY6U6XkUicNlJ1FZv/132'
+            }
+          }
+        }
+      });
+      */
+    } catch (error) {
+      console.error('邮箱登录失败:', error);
+      return { success: false, error: error.message || '网络请求失败' };
+    }
+  },
+  
+
+
+  /**
+   * 邮箱注册新用户
+   * @param {string} email - 邮箱
+   * @param {string} password - 密码
+   * @param {string} name - 用户名（可选）
+   * @returns {Promise} 注册结果
+   */
+  async signUpWithEmail(email, password, name = '') {
+    try {
+      // 使用实际Supabase API调用
+      const response = await supabase.post('/auth/v1/signup', {
+        email: email,
+        password: password,
+        data: {
+          name: name || '新用户'
+        }
+      });
+
+      if (response.user) {
+        return { success: true, data: response };
+      }
+      
+      return { success: false, error: response.error || '注册失败' };
+      
+      /* 模拟数据（已注释，使用实际API调用）
+      return Promise.resolve({
+        success: true,
+        data: {
+          user: {
+            id: 'user_' + Math.floor(Math.random() * 1000000),
+            email: email,
+            user_metadata: {
+              name: name || '新用户',
+              avatar_url: 'https://thirdwx.qlogo.cn/mmopen/vi_32/Q0j4TwGTfTK5F62eGpibIcMia1ibkE8lV3Bc7P9icWk9p27gYibWbY6U6XkUicNlJ1FZv/132'
+            }
+          }
+        }
+      });
+      */
+    } catch (error) {
+      console.error('邮箱注册失败:', error);
+      return { success: false, error: error.message || '网络请求失败' };
+    }
+  },
+  
+
+
   /**
    * 微信一键登录
    * @param {string} code - 微信登录code
@@ -394,19 +599,46 @@ const auth = {
   }
 };
 
-// 更新数据库服务，添加认证支持
-const authDb = {
+// 为db服务添加带认证的方法，避免重复定义
+Object.assign(db, {
   /**
    * 查询表数据（带认证）
    * @param {string} table - 表名
    * @param {Object} query - 查询参数
    */
-  async select(table, query = {}) {
+  async selectWithAuth(table, query = {}) {
     try {
-      const response = await supabase.fetch(`/rest/v1/${table}`, { method: 'GET' }, true);
+      // 复用select方法的参数处理逻辑，但使用带认证的fetch
+      const params = {};
+      
+      // 处理过滤条件
+      Object.keys(query).forEach(key => {
+        if (['limit', 'offset', 'order', 'select'].includes(key)) return;
+        
+        const value = query[key];
+        if (typeof value === 'string' && value.includes('.')) {
+          params[`${key}`] = value;
+        } else {
+          params[`${key}`] = `eq.${value}`;
+        }
+      });
+      
+      // 添加分页和排序参数
+      if (query.limit !== undefined) params.limit = query.limit;
+      if (query.offset !== undefined) params.offset = query.offset;
+      if (query.order) params.order = query.order;
+      if (query.select) params.select = query.select;
+      
+      console.log('Supabase认证查询参数:', params);
+      
+      const queryString = Object.keys(params).length > 0 
+        ? '?' + Object.keys(params).map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`).join('&')
+        : '';
+      
+      const response = await supabase.fetch(`/rest/v1/${table}${queryString}`, { method: 'GET' }, true);
       return response;
     } catch (error) {
-      console.error('数据库查询失败:', error);
+      console.error('数据库认证查询失败:', error);
       throw error;
     }
   },
@@ -416,7 +648,7 @@ const authDb = {
    * @param {string} table - 表名
    * @param {Object|Array} data - 要插入的数据
    */
-  async insert(table, data) {
+  async insertWithAuth(table, data) {
     try {
       const response = await supabase.fetch(`/rest/v1/${table}`, {
         method: 'POST',
@@ -424,16 +656,175 @@ const authDb = {
       }, true);
       return response;
     } catch (error) {
-      console.error('数据库插入失败:', error);
+      console.error('数据库认证插入失败:', error);
       throw error;
     }
   }
+});
+
+// 保留authDb别名以兼容旧代码
+const authDb = {
+  select: (...args) => db.selectWithAuth(...args),
+  insert: (...args) => db.insertWithAuth(...args)
 };
+
+/**
+ * 数据库操作通用错误处理包装器
+ * @param {Function} operation - 要执行的数据库操作函数
+ * @param {string} operationName - 操作名称（用于日志）
+ * @param {Object} options - 选项配置
+ * @returns {Promise} 操作结果
+ */
+async function dbOperationWithFallback(operation, operationName, options = {}) {
+  try {
+    // 优先使用带认证的数据库操作
+    if (db && typeof db.insertWithAuth === 'function') {
+      try {
+        console.log(`✓ 尝试使用带认证的数据库操作: ${operationName}`);
+        return await operation(db, 'withAuth');
+      } catch (authError) {
+        console.error(`✗ 带认证的数据库操作失败: ${operationName}`, authError);
+        // 允许降级到普通数据库操作
+      }
+    }
+    
+    // 如果带认证的操作失败或不存在，使用普通数据库操作
+    if (db) {
+      try {
+        console.log(`✓ 尝试使用普通数据库操作: ${operationName}`);
+        return await operation(db, 'normal');
+      } catch (dbError) {
+        console.error(`✗ 普通数据库操作失败: ${operationName}`, dbError);
+        return { success: false, error: options.errorMessage || '数据库操作失败' };
+      }
+    }
+    
+    return { success: false, error: '数据库服务不可用' };
+  } catch (error) {
+    console.error(`✗ 数据库操作过程中发生未捕获错误: ${operationName}`, error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * 将认证用户与users表关联
+ * @param {Object} userInfo - 用户信息对象
+ * @returns {Promise} 关联结果
+ */
+async function linkAuthUserWithUsersTable(userInfo) {
+  console.log('开始关联认证用户与users表:', userInfo);
+  
+  // 参数验证
+  if (!userInfo || !userInfo.user_id) {
+    console.error('无效的用户信息：缺少user_id');
+    return { success: false, error: '无效的用户信息：缺少user_id' };
+  }
+  
+  // 准备用户数据
+    const userData = {
+      auth_uid: userInfo.user_id, // 使用auth_uid字段关联Supabase的auth.users表
+      username: userInfo.name || '新用户',
+      avatar_url: userInfo.avatar_url || '',
+      open_id: userInfo.openId || `email_${userInfo.user_id}`, // 为非微信登录提供唯一标识，满足NOT NULL约束
+      identity: '农户', // 默认身份
+      location: '',
+      level: 1 // 默认等级
+    };
+  
+  // 使用通用错误处理包装器执行数据库操作
+    return await dbOperationWithFallback(async (dbService, mode) => {
+      // 根据操作模式选择适当的方法
+      const selectMethod = mode === 'withAuth' ? 'selectWithAuth' : 'select';
+      const insertMethod = mode === 'withAuth' ? 'insertWithAuth' : 'insert';
+      const updateMethod = 'update'; // update方法对于两种模式是相同的
+      
+      // 检查用户是否已存在（通过auth_uid字段）
+      let existingUser = null;
+      if (typeof dbService[selectMethod] === 'function') {
+        existingUser = await dbService[selectMethod]('users', { auth_uid: userInfo.user_id });
+        console.log('查询结果:', existingUser);
+      }
+      
+      // 根据用户是否存在执行相应操作
+      if (existingUser && Array.isArray(existingUser) && existingUser.length > 0) {
+        console.log('用户已存在，更新用户信息');
+        // 优先使用update方法，根据返回的ID更新
+        const existingUserId = existingUser[0].id;
+        if (typeof dbService[updateMethod] === 'function') {
+          await dbService[updateMethod]('users', existingUserId, userData);
+        } else {
+          await dbService[insertMethod]('users', { ...userData, id: existingUserId });
+        }
+      } else {
+        console.log('用户不存在，插入新记录');
+        // 插入时不指定id，让数据库自动生成UUID
+        await dbService[insertMethod]('users', userData);
+      }
+      
+      console.log(`✓ 成功关联用户（使用${mode === 'withAuth' ? '认证' : '普通'}数据库连接）`);
+      return { success: true };
+    }, 'linkAuthUser', { errorMessage: '无法将用户数据保存到数据库' });
+}
+
+/**
+ * 更新用户信息（包括用户名）
+ * @param {string} userId - 用户ID
+ * @param {Object} userData - 要更新的用户数据
+ * @returns {Promise} 更新结果
+ */
+async function updateUserProfile(userId, userData) {
+  console.log('开始更新用户信息:', userId, userData);
+  
+  // 参数验证
+  if (!userId) {
+    return { success: false, error: '用户ID不能为空' };
+  }
+  
+  // 构建更新数据
+  const updateData = {};
+  
+  // 只更新有效的字段
+  if (userData.username) updateData.username = userData.username;
+  if (userData.avatar_url) updateData.avatar_url = userData.avatar_url;
+  if (userData.location) updateData.location = userData.location;
+  if (userData.identity) updateData.identity = userData.identity;
+  
+  if (Object.keys(updateData).length === 0) {
+    return { success: false, error: '没有要更新的数据' };
+  }
+  
+  // 使用通用错误处理包装器执行数据库操作
+  return await dbOperationWithFallback(async (dbService, mode) => {
+    // 根据操作模式选择适当的方法
+    const selectMethod = mode === 'withAuth' ? 'selectWithAuth' : 'select';
+    const insertMethod = mode === 'withAuth' ? 'insertWithAuth' : 'insert';
+    const updateMethod = 'update'; // update方法对于两种模式是相同的
+    
+    // 检查用户是否存在
+    const existingUser = await dbService[selectMethod]('users', { id: userId });
+    
+    if (existingUser && Array.isArray(existingUser) && existingUser.length > 0) {
+      // 优先使用update方法，如果不存在则使用insert（假设支持upsert）
+      if (typeof dbService[updateMethod] === 'function') {
+        await dbService[updateMethod]('users', userId, updateData);
+      } else {
+        await dbService[insertMethod]('users', { ...updateData, id: userId });
+      }
+      
+      console.log(`✓ 成功更新用户信息（使用${mode === 'withAuth' ? '认证' : '普通'}数据库连接）`);
+      return { success: true };
+    } else {
+      return { success: false, error: '用户不存在' };
+    }
+  }, 'updateUserProfile', { errorMessage: '更新用户信息失败' });
+}
 
 module.exports = {
   supabase,
   db,
   authDb,
   storage,
-  auth
+  auth,
+  linkAuthUserWithUsersTable,
+  updateUserProfile
 };

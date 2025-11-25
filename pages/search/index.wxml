@@ -1,0 +1,114 @@
+<!-- pages/search/index.wxml -->
+<view class="search-container">
+  <!-- 搜索栏 -->
+  <view class="search-header">
+    <view class="search-input-wrapper">
+      <input 
+        class="search-input" 
+        placeholder="搜索知识、问题或关键词..." 
+        value="{{keyword}}"
+        bindinput="onInputChange"
+        confirm-type="search"
+        bindconfirm="onSearchTap"
+      />
+      <view class="search-btn" bindtap="onSearchTap">
+        <text class="search-btn-text">搜索</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 搜索历史和热门搜索 -->
+  <view class="search-suggestions" wx:if="{{!loading && articles.length === 0 && !error}}">
+    <!-- 搜索历史 -->
+    <view class="suggestion-section" wx:if="{{searchHistory.length > 0}}">
+      <view class="section-header">
+        <text class="section-title">搜索历史</text>
+        <text class="clear-btn" bindtap="clearSearchHistory">清除</text>
+      </view>
+      <view class="history-tags">
+        <view 
+          class="history-tag" 
+          wx:for="{{searchHistory}}" 
+          wx:key="index"
+          bindtap="onHistoryTap"
+          data-keyword="{{item}}"
+        >
+          <text>{{item}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 加载状态 -->
+  <view class="loading-container" wx:if="{{loading && articles.length === 0}}">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">搜索中...</text>
+  </view>
+
+  <!-- 错误状态 -->
+  <view class="error-container" wx:elif="{{error}}">
+    <text class="error-icon">⚠️</text>
+    <text class="error-text">{{error}}</text>
+    <button class="retry-btn" bindtap="onSearchTap">重新搜索</button>
+  </view>
+
+  <!-- 搜索结果 -->
+  <view class="search-results" wx:else>
+    <!-- 搜索结果统计 -->
+    <view class="result-header" wx:if="{{articles.length > 0}}">
+      <text class="result-count">找到 {{articles.length}} 条结果</text>
+    </view>
+
+    <!-- 空状态 -->
+    <view class="empty-container" wx:if="{{articles.length === 0 && !loading && keyword}}">
+      <text class="empty-icon">🔍</text>
+      <text class="empty-text">未找到相关文章</text>
+      <text class="empty-tip">试试其他关键词吧</text>
+    </view>
+
+    <!-- 文章列表 -->
+    <view class="article-list" wx:if="{{articles.length > 0}}">
+      <view wx:for="{{articles}}" wx:key="id" class="article-item">
+        <view class="article-content" bindtap="navigateToDetail" data-id="{{item.id}}">
+          <!-- 文章标题和摘要 -->
+          <view class="article-info">
+            <text class="article-title">{{item.title}}</text>
+            <text class="article-summary">{{item.summary || ''}}...</text>
+            
+            <!-- 文章元信息 -->
+            <view class="article-meta">
+              <text class="category" wx:if="{{item.categoryName}}">{{item.categoryName}}</text>
+              <text class="dot" wx:if="{{item.categoryName}}">·</text>
+              <text class="date">{{item.publishDate || '2024-01-01'}}</text>
+              <text class="dot">·</text>
+              <text class="view-count">{{item.viewCount || 0}} 浏览</text>
+            </view>
+          </view>
+          
+          <!-- 文章封面图 -->
+          <image class="article-cover" wx:if="{{item.coverImage}}" src="{{item.coverImage}}" mode="aspectFill"></image>
+        </view>
+        
+        <!-- 操作栏 -->
+        <view class="article-action">
+          <view class="action-item" bindtap="toggleFavorite" data-id="{{item.id}}">
+            <image class="action-icon" src="{{item.isFavorite ? '/static/icons/favorite-active.png' : '/static/icons/favorite.png'}}" mode="aspectFit"></image>
+            <text class="action-text">{{item.likeCount || 0}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 加载更多 -->
+    <view class="load-more" wx:if="{{loading && articles.length > 0}}">
+      <view class="loading-small-spinner"></view>
+      <text class="load-more-text">加载更多...</text>
+    </view>
+
+    <!-- 没有更多 -->
+    <view class="no-more" wx:if="{{!loading && !hasMore && articles.length > 0}}">
+      <text class="no-more-text">没有更多内容了</text>
+    </view>
+  </view>
+</view>
+

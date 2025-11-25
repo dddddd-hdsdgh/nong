@@ -1,0 +1,103 @@
+<!-- 注册页面 -->
+<view class="register-container">
+  <!-- 应用Logo -->
+  <view class="logo-container">
+    <image class="logo" src="/assets/images/logo.png" mode="aspectFit"></image>
+  </view>
+  
+  <!-- 页面标题 -->
+  <view class="title">账号注册</view>
+  
+  <!-- 注册表单 -->
+  <view class="register-form">
+    <!-- 用户名输入 -->
+    <view class="input-group">
+      <view class="input-label">用户名</view>
+      <input 
+        class="input-field" 
+        type="text" 
+        placeholder="请设置2-20位用户名" 
+        value="{{username}}" 
+        bindinput="onUsernameInput"
+        maxlength="20"
+      />
+    </view>
+    
+    <!-- 邮箱输入 -->
+    <view class="input-group">
+      <view class="input-label">邮箱</view>
+      <input 
+        class="input-field" 
+        type="text" 
+        placeholder="请输入邮箱" 
+        value="{{email}}" 
+        bindinput="onEmailInput"
+        auto-capitalize="none"
+      />
+    </view>
+    
+    <!-- 密码输入 -->
+    <view class="input-group">
+      <view class="input-label">密码</view>
+      <view class="password-container">
+        <input 
+          class="input-field" 
+          type="{{showPassword ? 'text' : 'password'}}" 
+          placeholder="请设置6-20位密码，包含字母和数字" 
+          value="{{password}}" 
+          bindinput="onPasswordInput"
+          maxlength="20"
+        />
+        <view class="password-toggle" bindtap="togglePasswordVisibility">
+          <image class="eye-icon" src="{{showPassword ? '/assets/images/eye-open.png' : '/assets/images/eye-closed.png'}}" mode="aspectFit"></image>
+        </view>
+      </view>
+    </view>
+    
+    <!-- 确认密码输入 -->
+    <view class="input-group">
+      <view class="input-label">确认密码</view>
+      <view class="password-container">
+        <input 
+          class="input-field" 
+          type="{{showConfirmPassword ? 'text' : 'password'}}" 
+          placeholder="请再次输入密码" 
+          value="{{confirmPassword}}" 
+          bindinput="onConfirmPasswordInput"
+          maxlength="20"
+        />
+        <view class="password-toggle" bindtap="toggleConfirmPasswordVisibility">
+          <image class="eye-icon" src="{{showConfirmPassword ? '/assets/images/eye-open.png' : '/assets/images/eye-closed.png'}}" mode="aspectFit"></image>
+        </view>
+      </view>
+    </view>
+    
+    <!-- 错误提示 -->
+    <view wx:if="{{errorMessage}}" class="error-message">{{errorMessage}}</view>
+    
+    <!-- 注册按钮 -->
+    <button 
+      class="register-button" 
+      type="primary" 
+      loading="{{isLoading}}" 
+      disabled="{{isLoading}}" 
+      bindtap="handleRegister"
+    >
+      注册
+    </button>
+    
+    <!-- 返回登录 -->
+    <view class="login-link">
+      <text>已有账号？</text>
+      <text class="link" bindtap="navigateBackToLogin">返回登录</text>
+    </view>
+  </view>
+  
+  <!-- 服务条款 -->
+  <view class="terms">
+    <text>注册即表示您同意</text>
+    <text class="term-link" bindtap="showUserAgreement">《用户协议》</text>
+    <text>和</text>
+    <text class="term-link" bindtap="showPrivacyPolicy">《隐私政策》</text>
+  </view>
+</view>

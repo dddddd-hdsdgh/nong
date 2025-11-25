@@ -48,8 +48,7 @@
         </view>
         
         <view class="category-grid">
-        <view 
-          class="category-item" 
+        <view class="category-item" 
           wx:for="{{categories}}" 
           wx:key="id"
           bindtap="navigateToCategory"
@@ -57,64 +56,23 @@
           data-name="{{item.name}}"
         >
           <view class="category-icon-container">
-            <image class="category-icon" src="{{item.icon}}"></image>
+            <image 
+              class="category-icon" 
+              src="{{item.icon}}"
+              binderror="onImageLoadError"
+              data-index="{{index}}"
+            ></image>
           </view>
           <text class="category-name">{{item.name}}</text>
           <text class="category-count">{{item.count}}篇</text>
         </view>
-      </view>
-      </view>
-
-      <!-- 热门知识 -->
-      <view class="hot-knowledge-section">
-        <view class="section-header">
-          <text class="section-title">热门知识</text>
-          <text class="section-subtitle">精选推荐内容</text>
         </view>
-        
-        <view class="knowledge-list">
-        <view 
-          class="knowledge-item" 
-          wx:for="{{hotKnowledge}}" 
-          wx:key="id"
-          bindtap="navigateToDetail"
-          data-id="{{item.id}}"
-        >
-          <view class="knowledge-content">
-            <text class="knowledge-title">{{item.title}}</text>
-            <view class="knowledge-meta">
-              <text class="knowledge-category">{{item.category}}</text>
-              <view class="knowledge-stats">
-                <view class="stat-item">
-                  <image class="stat-icon" src="/static/icons/view.png"></image>
-                  <text class="stat-text">{{item.viewCount}}</text>
-                </view>
-                <view class="stat-item">
-                  <image class="stat-icon" src="/static/icons/like.png"></image>
-                  <text class="stat-text">{{item.likeCount}}</text>
-                </view>
-              </view>
-            </view>
-            <!-- 知识摘要 -->
-            <text class="knowledge-summary" wx:if="{{item.summary}}">{{item.summary}}</text>
-          </view>
-          
-          <!-- 收藏按钮 -->
-          <view class="collect-btn" bindtap="onCollectTap" data-id="{{item.id}}">
-            <image 
-              class="collect-icon" 
-              src="{{item.isFavorite ? '/static/icons/collect-active.png' : '/static/icons/collect.png'}}"
-            ></image>
-          </view>
-        </view>
-      </view>
       </view>
 
       <!-- 底部提示 -->
       <view class="footer-tip">
         <text class="tip-text">更多知识内容持续更新中...</text>
       </view>
-
     </view>
   </block>
 </view>

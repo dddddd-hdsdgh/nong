@@ -4,8 +4,13 @@
     "pages/forum/index/index",
     "pages/forum/detail/index",
     "pages/knowledge/index",
+    "pages/knowledge/category/index",
+    "pages/knowledge/detail/index",
+    "pages/search/index",
     "pages/settings/index",
-    "pages/login/index"
+    "pages/login/index",
+    "pages/register/index",
+    "pages/profile/edit"
   ],
   "window": {
     "backgroundTextStyle": "light",

@@ -121,6 +121,12 @@
       "style": {
         "navigationBarTitleText": "设置"
       }
+    },
+    {
+      "path": "pages/profile/edit",
+      "style": {
+        "navigationBarTitleText": "编辑个人信息"
+      }
     }
   ],
   "condition": {

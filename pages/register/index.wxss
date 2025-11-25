@@ -1,0 +1,130 @@
+/* 注册页面样式 */
+.register-container {
+  padding: 40rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100vh;
+  box-sizing: border-box;
+}
+
+/* Logo样式 */
+.logo-container {
+  margin-top: 80rpx;
+  margin-bottom: 40rpx;
+}
+
+.logo {
+  width: 200rpx;
+  height: 200rpx;
+}
+
+/* 页面标题 */
+.title {
+  font-size: 36rpx;
+  font-weight: bold;
+  margin-bottom: 60rpx;
+  color: #333;
+}
+
+/* 表单样式 */
+.register-form {
+  width: 100%;
+  max-width: 500rpx;
+}
+
+/* 输入组 */
+.input-group {
+  margin-bottom: 30rpx;
+}
+
+.input-label {
+  font-size: 28rpx;
+  color: #666;
+  margin-bottom: 10rpx;
+}
+
+.input-field {
+  width: 100%;
+  height: 80rpx;
+  border: 1rpx solid #ddd;
+  border-radius: 8rpx;
+  padding: 0 20rpx;
+  box-sizing: border-box;
+  font-size: 28rpx;
+  background-color: #fff;
+}
+
+.input-field:focus {
+  border-color: #07c160;
+}
+
+/* 密码容器 */
+.password-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 20rpx;
+  height: 80rpx;
+  display: flex;
+  align-items: center;
+}
+
+.eye-icon {
+  width: 40rpx;
+  height: 40rpx;
+}
+
+/* 错误提示 */
+.error-message {
+  color: #e64340;
+  font-size: 24rpx;
+  margin-bottom: 20rpx;
+  text-align: center;
+}
+
+/* 注册按钮 */
+.register-button {
+  margin-top: 40rpx;
+  margin-bottom: 20rpx;
+  background-color: #07c160;
+  color: #fff;
+  font-size: 32rpx;
+  line-height: 80rpx;
+  border-radius: 8rpx;
+}
+
+.register-button:active {
+  opacity: 0.8;
+}
+
+/* 返回登录链接 */
+.login-link {
+  text-align: center;
+  font-size: 28rpx;
+  color: #666;
+  margin-bottom: 60rpx;
+}
+
+.link {
+  color: #07c160;
+  margin-left: 8rpx;
+}
+
+/* 服务条款 */
+.terms {
+  margin-top: auto;
+  margin-bottom: 40rpx;
+  font-size: 24rpx;
+  color: #999;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.term-link {
+  color: #07c160;
+}

@@ -11,24 +11,78 @@
     <text>登录后享受更多功能</text>
   </view>
   
-  <!-- 功能介绍 -->
-  <view class="features-container">
-    <view class="feature-item">
-      <image class="feature-icon" src="/icons/forum.png" mode="aspectFit"></image>
-      <text class="feature-text">参与农业论坛讨论</text>
+  <!-- 登录方式切换 -->
+  <view class="login-type-tabs">
+    <view class="tab {{loginType === 'email' ? 'active' : ''}}" bindtap="switchToEmailLogin">邮箱登录</view>
+    <view class="tab {{loginType === 'wechat' ? 'active' : ''}}" bindtap="switchToWechatLogin">微信登录</view>
+  </view>
+  
+  <!-- 邮箱登录表单 -->
+  <view wx:if="{{loginType === 'email'}}" class="email-login-form">
+    <!-- 邮箱输入 -->
+    <view class="input-group">
+      <image class="input-icon" src="/static/icons/email.png" mode="aspectFit"></image>
+      <input 
+        class="input" 
+        type="text" 
+        placeholder="请输入邮箱" 
+        value="{{email}}" 
+        bindinput="onEmailInput"
+        auto-capitalize="none"
+      />
     </view>
-    <view class="feature-item">
-      <image class="feature-icon" src="/icons/knowledge.png" mode="aspectFit"></image>
-      <text class="feature-text">获取专业农业知识</text>
+    
+    <!-- 密码输入 -->
+    <view class="input-group">
+      <image class="input-icon" src="/static/icons/lock.png" mode="aspectFit"></image>
+      <input 
+        class="input" 
+        password="{{!showPassword}}" 
+        placeholder="请输入密码" 
+        value="{{password}}" 
+        bindinput="onPasswordInput"
+        maxlength="20"
+      />
+      <view class="eye-icon" bindtap="togglePasswordVisibility">
+        <image src="{{showPassword ? '/static/icons/eye-open.png' : '/static/icons/eye-closed.png'}}" mode="aspectFit"></image>
+      </view>
     </view>
-    <view class="feature-item">
-      <image class="feature-icon" src="/icons/home.png" mode="aspectFit"></image>
-      <text class="feature-text">个性化内容推荐</text>
+    
+    <!-- 登录按钮 -->
+    <button 
+      class="email-login-btn" 
+      bindtap="handleEmailLogin"
+      loading="{{isLoading}}"
+      disabled="{{isLoading}}">
+      登录
+    </button>
+    
+    <!-- 注册和忘记密码 -->
+    <view class="login-actions">
+      <text class="register-link" bindtap="navigateToRegister">立即注册</text>
+      <text class="forgot-password" bindtap="forgotPassword">忘记密码？</text>
     </view>
   </view>
   
-  <!-- 微信一键登录按钮 -->
-  <view class="login-button-container">
+  <!-- 微信登录 -->
+  <view wx:if="{{loginType === 'wechat'}}" class="wechat-login-container">
+    <!-- 功能介绍 -->
+    <view class="features-container">
+      <view class="feature-item">
+        <image class="feature-icon" src="/icons/forum.png" mode="aspectFit"></image>
+        <text class="feature-text">参与农业论坛讨论</text>
+      </view>
+      <view class="feature-item">
+        <image class="feature-icon" src="/icons/knowledge.png" mode="aspectFit"></image>
+        <text class="feature-text">获取专业农业知识</text>
+      </view>
+      <view class="feature-item">
+        <image class="feature-icon" src="/icons/home.png" mode="aspectFit"></image>
+        <text class="feature-text">个性化内容推荐</text>
+      </view>
+    </view>
+    
+    <!-- 微信一键登录按钮 -->
     <button 
       class="wechat-login-btn" 
       open-type="getUserInfo"

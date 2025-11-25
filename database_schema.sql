@@ -5,6 +5,7 @@ CREATE TABLE users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   open_id VARCHAR(100) UNIQUE NOT NULL,  -- 微信openid
   union_id VARCHAR(100),                 -- 微信unionid
+  auth_uid UUID UNIQUE,                  -- 认证用户ID
   username VARCHAR(50) NOT NULL,         -- 用户名
   avatar_url VARCHAR(255),               -- 头像URL
   identity VARCHAR(50),                  -- 用户身份（如：农户、专家）
@@ -165,15 +166,15 @@ CREATE INDEX idx_notifications_is_read ON notifications(is_read);
 
 -- 权限设置（Supabase特定）
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can view all users" ON users FOR SELECT USING (true);
-CREATE POLICY "Users can update their own profile" ON users FOR UPDATE USING (id = auth.uid());
+CREATE OR REPLACE POLICY "Users can view all users" ON users FOR SELECT USING (true);
+CREATE OR REPLACE POLICY "Users can update their own profile" ON users FOR UPDATE USING (id = auth.uid());
 
 ALTER TABLE forum_posts ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Public can view published posts" ON forum_posts FOR SELECT USING (status = 'published');
-CREATE POLICY "Users can create posts" ON forum_posts FOR INSERT WITH CHECK (true);
-CREATE POLICY "Users can update their own posts" ON forum_posts FOR UPDATE USING (user_id = auth.uid());
+CREATE OR REPLACE POLICY "Public can view published posts" ON forum_posts FOR SELECT USING (status = 'published');
+CREATE OR REPLACE POLICY "Users can create posts" ON forum_posts FOR INSERT WITH CHECK (true);
+CREATE OR REPLACE POLICY "Users can update their own posts" ON forum_posts FOR UPDATE USING (user_id = auth.uid());
 
 ALTER TABLE forum_comments ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Public can view comments" ON forum_comments FOR SELECT USING (true);
-CREATE POLICY "Users can create comments" ON forum_comments FOR INSERT WITH CHECK (true);
-CREATE POLICY "Users can update their own comments" ON forum_comments FOR UPDATE USING (user_id = auth.uid());
+CREATE OR REPLACE POLICY "Public can view comments" ON forum_comments FOR SELECT USING (true);
+CREATE OR REPLACE POLICY "Users can create comments" ON forum_comments FOR INSERT WITH CHECK (true);
+CREATE OR REPLACE POLICY "Users can update their own comments" ON forum_comments FOR UPDATE USING (user_id = auth.uid());

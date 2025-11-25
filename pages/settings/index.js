@@ -1,13 +1,13 @@
 // pages/settings/index.js
 const app = getApp();
+const { db } = require('../../services/supabase.js');
 Page({
   /**
    * 页面的初始数据
    */
   data: {
     userInfo: {
-      username: '',
-      identity: ''
+      username: ''
     },
     isLoggedIn: false,
     cacheSize: '0KB',
@@ -39,40 +39,65 @@ Page({
   /**
    * 获取用户信息
    */
-  getUserInfo: function() {
+  getUserInfo: async function() {
     try {
       // 优先从app全局数据获取用户信息
-      const appUserInfo = app.getCurrentUser();
-      const isLoggedIn = app.isAuthenticated();
+      const appUserInfo = app.globalData.userInfo;
+      const isLoggedIn = app.globalData.isLoggedIn;
       
       if (isLoggedIn && appUserInfo) {
-        // 格式化用户信息显示
-        const displayInfo = {
-          username: appUserInfo.user_metadata?.name || '微信用户',
-          identity: '普通用户', // 可以根据实际业务逻辑设置用户角色
-          avatar: appUserInfo.user_metadata?.avatar_url
-        };
-        
-        this.setData({
-          userInfo: displayInfo,
-          isLoggedIn: true
-        });
-      } else {
-        // 尝试从本地存储获取
-        const storageUserInfo = wx.getStorageSync(app.STORAGE_KEYS.USER_INFO);
-        if (storageUserInfo) {
-          const displayInfo = {
-            username: storageUserInfo.user_metadata?.name || '微信用户',
-            identity: '普通用户',
-            avatar: storageUserInfo.user_metadata?.avatar_url
+          // 初始化显示信息
+          let displayInfo = {
+            username: appUserInfo.name || appUserInfo.user_metadata?.name || '用户',
+            avatar: appUserInfo.avatar_url || appUserInfo.user_metadata?.avatar_url,
+            email: appUserInfo.email,
+            userId: appUserInfo.user_id
           };
+          
+          // 尝试从users表中获取最新的用户名
+          try {
+            const userFromDb = await db.select('users', { auth_uid: appUserInfo.user_id });
+            if (userFromDb && Array.isArray(userFromDb) && userFromDb.length > 0) {
+              // 从数据库中获取用户名
+              displayInfo.username = userFromDb[0].username || displayInfo.username;
+            }
+          } catch (dbError) {
+            console.warn('从数据库获取用户信息失败，使用缓存数据:', dbError);
+          }
           
           this.setData({
             userInfo: displayInfo,
             isLoggedIn: true
           });
+      } else {
+          // 尝试从本地存储获取
+          const storageUserInfo = wx.getStorageSync(app.STORAGE_KEYS.USER_INFO);
+          if (storageUserInfo) {
+            // 初始化显示信息
+            let displayInfo = {
+              username: storageUserInfo.name || storageUserInfo.user_metadata?.name || '用户',
+              avatar: storageUserInfo.avatar_url || storageUserInfo.user_metadata?.avatar_url,
+              email: storageUserInfo.email,
+              userId: storageUserInfo.user_id
+            };
+            
+            // 尝试从users表中获取最新的用户名
+            try {
+              const userFromDb = await db.select('users', { auth_uid: storageUserInfo.user_id });
+              if (userFromDb && Array.isArray(userFromDb) && userFromDb.length > 0) {
+                // 从数据库中获取用户名
+                displayInfo.username = userFromDb[0].username || displayInfo.username;
+              }
+            } catch (dbError) {
+              console.warn('从数据库获取用户信息失败，使用缓存数据:', dbError);
+            }
+            
+            this.setData({
+              userInfo: displayInfo,
+              isLoggedIn: true
+            });
+          }
         }
-      }
     } catch (e) {
       console.error('获取用户信息失败:', e);
     }
@@ -255,7 +280,6 @@ Page({
             this.setData({
               userInfo: {
                 username: '',
-                identity: '',
                 avatar: null
               },
               isLoggedIn: false
@@ -298,6 +322,31 @@ Page({
       console.error('打开登录页面失败:', e);
       wx.showToast({
         title: '打开登录页面失败',
+        icon: 'none',
+        duration: 2000
+      });
+    }
+  },
+
+  /**
+   * 处理个人信息编辑
+   */
+  handleUserInfoEdit: function() {
+    try {
+      wx.navigateTo({
+        url: '/pages/profile/edit',
+        fail: () => {
+          wx.showToast({
+            title: '页面开发中',
+            icon: 'none',
+            duration: 2000
+          });
+        }
+      });
+    } catch (e) {
+      console.error('打开个人信息编辑页面失败:', e);
+      wx.showToast({
+        title: '页面开发中',
         icon: 'none',
         duration: 2000
       });

@@ -9,8 +9,6 @@ Page({
     error: null,
     // 知识库分类
     categories: [],
-    // 热门知识
-    hotKnowledge: [],
     // 当前选中的分类
     activeCategory: null,
     // 用户登录状态
@@ -49,35 +47,57 @@ Page({
     this.setData({ loading: true, error: null });
     
     try {
-      // 并行加载分类和热门知识
-      const [categoriesResult, hotKnowledgeResult] = await Promise.all([
-        knowledgeService.getCategories(),
-        knowledgeService.getHotKnowledge(6) // 获取更多热门文章
-      ]);
+      // 只加载分类数据
+      const categoriesResult = await knowledgeService.getCategories();
 
       // 更新分类数据
       if (categoriesResult.success) {
-        // 如果没有图标，为每个分类设置默认图标
-        const categories = categoriesResult.data.map((cat, index) => ({
-          ...cat,
-          icon: cat.icon || `/static/icons/category_${(index % 6) + 1}.png`
-        }));
+        // 处理分类图标，确保阿里云OSS图片URL正确并优化
+          const categories = categoriesResult.data.map((cat, index) => {
+            let icon = cat.icon;
+            
+            // 如果有icon值
+            if (icon) {
+              console.log('原始图片URL:', icon);
+              
+              // 检查是否已经包含http或https协议前缀
+              if (typeof icon === 'string' && !icon.startsWith('http://') && !icon.startsWith('https://')) {
+                // 如果是阿里云OSS地址但没有协议前缀，添加https://
+                if (icon.includes('aliyuncs.com')) {
+                  icon = 'https://' + icon;
+                  console.log('已添加https前缀:', icon);
+                }
+              }
+              
+              // 优化处理：移除可能导致403错误的查询参数（Expires、OSSAccessKeyId、Signature等）
+              if (typeof icon === 'string' && icon.includes('aliyuncs.com') && icon.includes('?')) {
+                // 只保留URL的基础部分，移除查询参数
+                const baseUrl = icon.split('?')[0];
+                console.log('已移除查询参数，使用基础URL:', baseUrl);
+                icon = baseUrl;
+              }
+            } else {
+              // 如果没有图标，使用本地默认图标
+              icon = `/static/icons/category_${(index % 6) + 1}.png`;
+            }
+            
+            return {
+              ...cat,
+              icon: icon,
+              // 添加图片加载状态标记
+              iconLoaded: false
+            };
+          });
         
         this.setData({
           categories: categories,
           activeCategory: categories[0] // 默认选中第一个分类
         });
+        
+        // 预加载所有图片，提前检测加载失败的情况
+        this.preloadImages(categories);
       } else {
         console.warn('加载分类失败:', categoriesResult.message);
-      }
-
-      // 更新热门知识数据
-      if (hotKnowledgeResult.success) {
-        this.setData({
-          hotKnowledge: hotKnowledgeResult.data
-        });
-      } else {
-        console.warn('加载热门知识失败:', hotKnowledgeResult.message);
       }
     } catch (error) {
       console.error('加载数据失败:', error);
@@ -112,6 +132,89 @@ Page({
       });
     }
   },
+  
+  // 预加载图片并监控错误
+  preloadImages(categories) {
+    console.log('开始预加载图片，总数:', categories.length);
+    let failedCount = 0;
+    
+    // 为每个分类的图片创建预加载任务
+    const preloadPromises = categories.map((category, index) => {
+      return new Promise((resolve) => {
+        // 只预加载远程图片
+        if (category.icon && category.icon.startsWith('http')) {
+          wx.getImageInfo({
+            src: category.icon,
+            success: (res) => {
+              console.log(`图片预加载成功: ${category.icon}`);
+              resolve({ success: true, index });
+            },
+            fail: (err) => {
+              console.error(`图片预加载失败: ${category.icon}`, err);
+              failedCount++;
+              resolve({ success: false, index });
+            }
+          });
+        } else {
+          resolve({ success: true, index });
+        }
+      });
+    });
+    
+    // 等待所有预加载任务完成
+    Promise.all(preloadPromises).then((results) => {
+      console.log(`图片预加载完成，失败数量: ${failedCount}`);
+      
+      // 检查是否有失败的图片需要替换
+      const hasFailures = results.some(result => !result.success);
+      if (hasFailures) {
+        // 创建新的分类数组副本
+        const updatedCategories = [...this.data.categories];
+        
+        // 替换所有失败的图片
+        results.forEach((result, i) => {
+          if (!result.success) {
+            const index = result.index;
+            const defaultIcon = `/static/icons/category_${(index % 6) + 1}.png`;
+            console.log(`替换预加载失败图片为默认图标: ${defaultIcon}`);
+            updatedCategories[index].icon = defaultIcon;
+            updatedCategories[index].iconLoaded = false;
+          }
+        });
+        
+        // 更新数据
+        this.setData({
+          categories: updatedCategories
+        });
+      }
+    });
+  },
+  
+  // 处理图片加载错误，替换为本地默认图标
+  onImageLoadError(e) {
+    const { index } = e.currentTarget.dataset;
+    console.log('图片加载失败，索引:', index);
+    
+    // 获取当前分类数据
+    const categories = this.data.categories;
+    if (categories && categories[index]) {
+      // 保存原始URL用于调试
+      const originalUrl = categories[index].icon;
+      
+      // 替换为本地默认图标
+      const defaultIcon = `/static/icons/category_${(index % 6) + 1}.png`;
+      console.log(`替换失败图片 ${originalUrl} 为默认图标 ${defaultIcon}`);
+      
+      // 更新分类数据
+      categories[index].icon = defaultIcon;
+      categories[index].iconLoaded = false;
+      
+      // 设置更新后的数据
+      this.setData({
+        categories: categories
+      });
+    }
+  },
 
   /**
    * 跳转到分类页面
@@ -125,126 +228,12 @@ Page({
     });
   },
 
-  // 知识条目点击事件
-  onKnowledgeTap: function(e) {
-    const knowledgeId = e.currentTarget.dataset.id;
-    const knowledge = this.data.hotKnowledge.find(item => item.id === knowledgeId);
-    
-    if (knowledge) {
-      console.log('查看知识:', knowledge.title);
-      
-      // 跳转到知识详情页
-      wx.navigateTo({
-        url: `/pages/knowledge/detail/index?articleId=${knowledgeId}`
-      });
-    }
-  },
 
-  /**
-   * 跳转到文章详情页面
-   */
-  navigateToDetail(e) {
-    const articleId = e.currentTarget.dataset.id;
-    
-    wx.navigateTo({
-      url: `/pages/knowledge/detail/index?articleId=${articleId}`
-    });
-  },
-
-  // 收藏/取消收藏
-  async onCollectTap(e) {
-    e.stopPropagation(); // 阻止冒泡，避免触发条目点击
-    
-    // 检查登录状态
-    if (!this.data.isLoggedIn) {
-      wx.showModal({
-        title: '提示',
-        content: '请先登录后再进行收藏',
-        success: (res) => {
-          if (res.confirm) {
-            wx.navigateTo({
-              url: '/pages/login/index'
-            });
-          }
-        }
-      });
-      return;
-    }
-    
-    const knowledgeId = e.currentTarget.dataset.id;
-    const knowledgeIndex = this.data.hotKnowledge.findIndex(item => item.id === knowledgeId);
-    
-    if (knowledgeIndex !== -1) {
-      const knowledge = this.data.hotKnowledge[knowledgeIndex];
-      const newCollected = !knowledge.isFavorite;
-      
-      // 更新UI状态（乐观更新）
-      const hotKnowledge = [...this.data.hotKnowledge];
-      hotKnowledge[knowledgeIndex].isFavorite = newCollected;
-      hotKnowledge[knowledgeIndex].likeCount = newCollected
-        ? (hotKnowledge[knowledgeIndex].likeCount || 0) + 1
-        : Math.max(0, (hotKnowledge[knowledgeIndex].likeCount || 0) - 1);
-      
-      this.setData({
-        hotKnowledge: hotKnowledge
-      });
-      
-      try {
-        // 调用收藏API
-        const result = await knowledgeService.favoriteKnowledge(knowledgeId, newCollected);
-        
-        if (result.success) {
-          wx.showToast({
-            title: newCollected ? '收藏成功' : '取消收藏成功',
-            icon: 'success',
-            duration: 1500
-          });
-          
-          console.log(`${newCollected ? '收藏' : '取消收藏'}知识:`, knowledge.title);
-        } else {
-          // 如果操作失败，恢复原状态
-          hotKnowledge[knowledgeIndex].isFavorite = !newCollected;
-          hotKnowledge[knowledgeIndex].likeCount = newCollected
-            ? (hotKnowledge[knowledgeIndex].likeCount || 0) - 1
-            : (hotKnowledge[knowledgeIndex].likeCount || 0) + 1;
-          
-          this.setData({
-            hotKnowledge: hotKnowledge
-          });
-          
-          wx.showToast({
-            title: result.message || '操作失败',
-            icon: 'error',
-            duration: 2000
-          });
-        }
-      } catch (error) {
-        console.error('收藏操作失败:', error);
-        // 恢复原状态
-        hotKnowledge[knowledgeIndex].isFavorite = !newCollected;
-        hotKnowledge[knowledgeIndex].likeCount = newCollected
-          ? (hotKnowledge[knowledgeIndex].likeCount || 0) - 1
-          : (hotKnowledge[knowledgeIndex].likeCount || 0) + 1;
-        
-        this.setData({
-          hotKnowledge: hotKnowledge
-        });
-        
-        wx.showToast({
-          title: '网络错误，请稍后重试',
-          icon: 'error',
-          duration: 2000
-        });
-      }
-    }
-  },
 
   // 搜索知识
   onSearchTap: function() {
     // 导航到搜索页面
-    wx.navigateTo({
-      url: '/pages/knowledge/search'
-    });
+    this.goToSearch();
   },
 
   /**
@@ -283,9 +272,11 @@ Page({
       return;
     }
     
-    // 跳转到我的收藏页面
-    wx.navigateTo({
-      url: '/pages/knowledge/favorites'
+    // 显示提示信息
+    wx.showToast({
+      title: '功能开发中',
+      icon: 'none',
+      duration: 2000
     });
   },
 

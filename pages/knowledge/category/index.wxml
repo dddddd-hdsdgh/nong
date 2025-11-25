@@ -2,13 +2,13 @@
 
 <!-- 加载状态 -->
 <view class="loading-container" wx:if="{{loading && articles.length === 0}}">
-  <image class="loading-icon" src="/static/icons/loading.gif" mode="aspectFit"></image>
+  <view class="loading-spinner"></view>
   <text class="loading-text">加载中...</text>
 </view>
 
 <!-- 错误状态 -->
 <view class="error-container" wx:elif="{{error}}">
-  <image class="error-icon" src="/static/icons/error.png" mode="aspectFit"></image>
+  <text class="error-icon">⚠️</text>
   <text class="error-text">{{error}}</text>
   <button class="retry-btn" bindtap="loadArticles" data-refresh="true">重新加载</button>
 </view>
@@ -17,7 +17,7 @@
 <view class="article-list" wx:else>
   <!-- 空状态 -->
   <view class="empty-container" wx:if="{{articles.length === 0 && !loading}}">
-    <image class="empty-icon" src="/static/icons/empty.png" mode="aspectFit"></image>
+    <text class="empty-icon">📄</text>
     <text class="empty-text">该分类下暂无文章</text>
   </view>
   
@@ -27,7 +27,7 @@
       <!-- 文章标题和摘要 -->
       <view class="article-info">
         <text class="article-title">{{item.title}}</text>
-        <text class="article-summary">{{item.summary || item.content.replace(/<[^>]*>/g, '').substring(0, 100)}}...</text>
+        <text class="article-summary">{{item.summary || ''}}...</text>
         
         <!-- 文章元信息 -->
         <view class="article-meta">
@@ -54,7 +54,7 @@
   
   <!-- 加载更多 -->
   <view class="load-more" wx:if="{{loading && articles.length > 0}}">
-    <image class="loading-small-icon" src="/static/icons/loading.gif" mode="aspectFit"></image>
+    <view class="loading-small-spinner"></view>
     <text class="load-more-text">加载更多...</text>
   </view>
   
