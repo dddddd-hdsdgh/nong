@@ -3,6 +3,7 @@
     "pages/home/index",
     "pages/forum/index/index",
     "pages/forum/detail/index",
+    "pages/forum/create/index",
     "pages/knowledge/index",
     "pages/knowledge/category/index",
     "pages/knowledge/detail/index",

@@ -2,6 +2,8 @@
 const SUPABASE_URL = 'https://wetcvycrvmzzzerqmtja.supabase.co'; // 请替换为实际的Supabase项目URL
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndldGN2eWNydm16enplcnFtdGphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM4MDYzNzIsImV4cCI6MjA3OTM4MjM3Mn0.HLFooE7gTkc46HS_9yEatb-Rajc9sDh1KnHzaGPVDEQ'; // 请替换为实际的匿名密钥
 const app = getApp();
+const USER_AUTH_COLUMN_CANDIDATES = ['auth_uid', 'auth_id'];
+let detectedUserAuthColumn = null;
 
 /**
  * 初始化Supabase客户端
@@ -21,11 +23,15 @@ function createClient() {
      * @returns {Promise} 请求结果
      */
     async fetch(path, options = {}, requireAuth = false) {
+      const requestOptions = { ...options };
+      const hasRetried = !!requestOptions.__retried;
+      delete requestOptions.__retried;
+
       // 构建请求头
       const headers = {
         'Content-Type': 'application/json',
         'apikey': this.anonKey,
-        ...options.header
+        ...requestOptions.header
       };
       
       // 如果需要认证，添加Authorization头
@@ -40,16 +46,21 @@ function createClient() {
         wx.request({
           url: `${this.url}${path}`,
           header: headers,
-          method: options.method || 'GET',
-          data: options.body,
+          method: requestOptions.method || 'GET',
+          data: requestOptions.body,
           success: (res) => {
             // 处理401错误（token过期）
             if (res.statusCode === 401 && requireAuth) {
+              if (hasRetried) {
+                app.logout();
+                reject(new Error('登录已过期，请重新登录'));
+                return;
+              }
               // 尝试刷新token
               auth.refreshToken().then(refreshResult => {
                 if (refreshResult.success) {
                   // 刷新成功后重试请求
-                  this.fetch(path, options, requireAuth).then(resolve).catch(reject);
+                  this.fetch(path, { ...options, __retried: true }, requireAuth).then(resolve).catch(reject);
                 } else {
                   // 刷新失败，清除登录状态
                   app.logout();
@@ -706,64 +717,127 @@ async function dbOperationWithFallback(operation, operationName, options = {}) {
   }
 }
 
+function isMissingAuthColumnError(error, column) {
+  const message = (error && error.message) || error?.toString?.() || '';
+  return message.includes(`users.${column}`) && message.includes('does not exist');
+}
+
+async function selectUsersByAuthColumn(dbService, methodName, userId) {
+  if (typeof dbService[methodName] !== 'function') {
+    return { column: detectedUserAuthColumn, list: [] };
+  }
+
+  let lastError = null;
+  for (const column of USER_AUTH_COLUMN_CANDIDATES) {
+    const params = {};
+    params[column] = userId;
+    try {
+      const result = await dbService[methodName]('users', params);
+      detectedUserAuthColumn = column;
+      return { column, list: Array.isArray(result) ? result : [] };
+    } catch (error) {
+      if (isMissingAuthColumnError(error, column)) {
+        lastError = error;
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  if (lastError) {
+    throw lastError;
+  }
+
+  return { column: detectedUserAuthColumn, list: [] };
+}
+
+function buildUserData(userInfo, column) {
+  const authColumn = column || detectedUserAuthColumn || USER_AUTH_COLUMN_CANDIDATES[0];
+  return {
+    [authColumn]: userInfo.user_id,
+    username: userInfo.name || '新用户',
+    avatar_url: userInfo.avatar_url || '',
+    open_id: userInfo.openId || `email_${userInfo.user_id}`,
+    identity: '农户',
+    location: '',
+    level: 1
+  };
+}
+
 /**
- * 将认证用户与users表关联
+ * 将认证用户与users表关联，并返回用户记录
  * @param {Object} userInfo - 用户信息对象
  * @returns {Promise} 关联结果
  */
 async function linkAuthUserWithUsersTable(userInfo) {
   console.log('开始关联认证用户与users表:', userInfo);
   
-  // 参数验证
   if (!userInfo || !userInfo.user_id) {
     console.error('无效的用户信息：缺少user_id');
     return { success: false, error: '无效的用户信息：缺少user_id' };
   }
-  
-  // 准备用户数据
-    const userData = {
-      auth_uid: userInfo.user_id, // 使用auth_uid字段关联Supabase的auth.users表
-      username: userInfo.name || '新用户',
-      avatar_url: userInfo.avatar_url || '',
-      open_id: userInfo.openId || `email_${userInfo.user_id}`, // 为非微信登录提供唯一标识，满足NOT NULL约束
-      identity: '农户', // 默认身份
-      location: '',
-      level: 1 // 默认等级
-    };
-  
-  // 使用通用错误处理包装器执行数据库操作
-    return await dbOperationWithFallback(async (dbService, mode) => {
-      // 根据操作模式选择适当的方法
-      const selectMethod = mode === 'withAuth' ? 'selectWithAuth' : 'select';
-      const insertMethod = mode === 'withAuth' ? 'insertWithAuth' : 'insert';
-      const updateMethod = 'update'; // update方法对于两种模式是相同的
-      
-      // 检查用户是否已存在（通过auth_uid字段）
-      let existingUser = null;
-      if (typeof dbService[selectMethod] === 'function') {
-        existingUser = await dbService[selectMethod]('users', { auth_uid: userInfo.user_id });
-        console.log('查询结果:', existingUser);
-      }
-      
-      // 根据用户是否存在执行相应操作
-      if (existingUser && Array.isArray(existingUser) && existingUser.length > 0) {
-        console.log('用户已存在，更新用户信息');
-        // 优先使用update方法，根据返回的ID更新
-        const existingUserId = existingUser[0].id;
-        if (typeof dbService[updateMethod] === 'function') {
-          await dbService[updateMethod]('users', existingUserId, userData);
-        } else {
-          await dbService[insertMethod]('users', { ...userData, id: existingUserId });
-        }
+
+  return await dbOperationWithFallback(async (dbService, mode) => {
+    const selectMethod = mode === 'withAuth' ? 'selectWithAuth' : 'select';
+    const insertMethod = mode === 'withAuth' ? 'insertWithAuth' : 'insert';
+    const updateMethod = 'update';
+
+    const selection = await selectUsersByAuthColumn(dbService, selectMethod, userInfo.user_id);
+    const authColumn = selection.column || detectedUserAuthColumn || USER_AUTH_COLUMN_CANDIDATES[0];
+    let userRecord = selection.list && selection.list.length > 0 ? selection.list[0] : null;
+    const userData = buildUserData(userInfo, authColumn);
+
+    if (userRecord) {
+      console.log('用户已存在，更新用户信息');
+      if (typeof dbService[updateMethod] === 'function') {
+        await dbService[updateMethod]('users', userRecord.id, userData);
       } else {
-        console.log('用户不存在，插入新记录');
-        // 插入时不指定id，让数据库自动生成UUID
-        await dbService[insertMethod]('users', userData);
+        await dbService[insertMethod]('users', { ...userData, id: userRecord.id });
       }
-      
-      console.log(`✓ 成功关联用户（使用${mode === 'withAuth' ? '认证' : '普通'}数据库连接）`);
-      return { success: true };
-    }, 'linkAuthUser', { errorMessage: '无法将用户数据保存到数据库' });
+      userRecord = { ...userRecord, ...userData };
+    } else {
+      console.log('用户不存在，插入新记录');
+      let insertError = null;
+      let insertedRecord = null;
+
+      for (const column of USER_AUTH_COLUMN_CANDIDATES) {
+        const payload = buildUserData(userInfo, column);
+        try {
+          await dbService[insertMethod]('users', payload);
+          detectedUserAuthColumn = column;
+          const verify = await selectUsersByAuthColumn(dbService, selectMethod, userInfo.user_id);
+          if (verify.list && verify.list.length > 0) {
+            insertedRecord = verify.list[0];
+            break;
+          }
+        } catch (error) {
+          if (isMissingAuthColumnError(error, column)) {
+            insertError = error;
+            continue;
+          }
+          throw error;
+        }
+      }
+
+      if (!insertedRecord) {
+        if (insertError) {
+          throw insertError;
+        }
+        console.error('无法插入用户记录');
+        return { success: false, error: '无法插入用户记录' };
+      }
+
+      userRecord = insertedRecord;
+    }
+
+    if (!userRecord) {
+      console.error('无法获取或创建用户记录');
+      return { success: false, error: '无法获取用户记录' };
+    }
+
+    console.log(`✓ 成功关联用户（使用${mode === 'withAuth' ? '认证' : '普通'}数据库连接）`);
+    return { success: true, data: userRecord };
+  }, 'linkAuthUser', { errorMessage: '无法将用户数据保存到数据库' });
 }
 
 /**

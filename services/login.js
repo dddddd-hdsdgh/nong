@@ -3,6 +3,22 @@ const app = getApp();
 // 引入Supabase认证服务和用户关联函数
 const { auth, linkAuthUserWithUsersTable, updateUserProfile } = require('./supabase');
 
+const USER_DB_ID_STORAGE_KEY = 'userDbId';
+
+function cacheUserDbRecord(record) {
+  if (!record || !record.id) return;
+  try {
+    const currentInfo = app.globalData.userInfo || wx.getStorageSync(app.STORAGE_KEYS.USER_INFO) || {};
+    const updatedInfo = { ...currentInfo, user_db_id: record.id };
+    app.globalData.userInfo = updatedInfo;
+    app.globalData.userDbId = record.id;
+    wx.setStorageSync(app.STORAGE_KEYS.USER_INFO, updatedInfo);
+    wx.setStorageSync(USER_DB_ID_STORAGE_KEY, record.id);
+  } catch (err) {
+    console.warn('缓存用户数据库ID失败:', err);
+  }
+}
+
 /**
  * 微信一键登录
  * @param {Function} successCallback - 登录成功回调
@@ -62,12 +78,14 @@ function exchangeCodeForToken(code, successCallback, failCallback) {
     linkAuthUserWithUsersTable(mockResponse.data.userInfo)
       .then(linkResult => {
         console.log('微信登录用户关联结果:', linkResult);
+        if (linkResult.success && linkResult.data) {
+          cacheUserDbRecord(linkResult.data);
+        }
         wx.hideLoading();
         successCallback(mockResponse.data);
       })
       .catch(error => {
         console.error('关联用户时发生错误:', error);
-        // 即使关联失败，也让登录流程继续
         wx.hideLoading();
         successCallback(mockResponse.data);
       });
@@ -147,11 +165,13 @@ function emailLogin(email, password, successCallback, failCallback) {
         linkAuthUserWithUsersTable(userInfo)
           .then(linkResult => {
             console.log('邮箱登录用户关联结果:', linkResult);
+            if (linkResult.success && linkResult.data) {
+              cacheUserDbRecord(linkResult.data);
+            }
             successCallback(result.data);
           })
           .catch(error => {
             console.error('关联用户时发生错误:', error);
-            // 即使关联失败，也让登录流程继续
             successCallback(result.data);
           });
       } else {
@@ -193,17 +213,19 @@ function emailRegister(email, password, name = '', successCallback, failCallback
                 avatar_url: loginResult.data.user.user_metadata?.avatar_url
               };
               
-              // 将用户信息关联到自定义users表
-              linkAuthUserWithUsersTable(userInfo)
-                .then(linkResult => {
-                  console.log('注册用户关联结果:', linkResult);
-                  successCallback(result.data);
-                })
-                .catch(error => {
-                  console.error('关联注册用户时发生错误:', error);
-                  // 即使关联失败，也让注册流程继续
-                  successCallback(result.data);
-                });
+        // 将用户信息关联到自定义users表
+        linkAuthUserWithUsersTable(userInfo)
+          .then(linkResult => {
+            console.log('注册用户关联结果:', linkResult);
+            if (linkResult.success && linkResult.data) {
+              cacheUserDbRecord(linkResult.data);
+            }
+            successCallback(result.data);
+          })
+          .catch(error => {
+            console.error('关联注册用户时发生错误:', error);
+            successCallback(result.data);
+          });
             } else {
               // 自动登录失败，但注册本身成功了
               successCallback(result.data);

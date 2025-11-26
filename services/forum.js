@@ -1,17 +1,134 @@
 // 论坛相关的服务接口
 // 导入Supabase服务
 const { db } = require('./supabase');
+const app = getApp();
+const USER_DB_ID_STORAGE_KEY = 'userDbId';
+const USER_AUTH_COLUMN_CANDIDATES = ['auth_uid', 'auth_id'];
+
+function getAppUserInfo() {
+  try {
+    if (app && typeof app.getUserInfo === 'function') {
+      const info = app.getUserInfo();
+      if (info) {
+        return info;
+      }
+    }
+  } catch (err) {
+    console.warn('获取全局用户信息失败:', err);
+  }
+
+  const storageKey = app && app.STORAGE_KEYS ? app.STORAGE_KEYS.USER_INFO : 'userInfo';
+  try {
+    return wx.getStorageSync(storageKey) || wx.getStorageSync('userInfo');
+  } catch (err) {
+    console.warn('读取本地用户信息失败:', err);
+    return null;
+  }
+}
+
+function cacheUserDbId(id) {
+  if (!id) return;
+  try {
+    if (app) {
+      app.globalData.userDbId = id;
+      if (app.globalData.userInfo) {
+        app.globalData.userInfo = { ...app.globalData.userInfo, user_db_id: id };
+      }
+    }
+    wx.setStorageSync(USER_DB_ID_STORAGE_KEY, id);
+  } catch (err) {
+    console.warn('缓存用户数据库ID失败:', err);
+  }
+}
+
+function getCachedUserDbId() {
+  if (app) {
+    if (app.globalData.userDbId) {
+      return app.globalData.userDbId;
+    }
+    if (app.globalData.userInfo && app.globalData.userInfo.user_db_id) {
+      return app.globalData.userInfo.user_db_id;
+    }
+  }
+
+  try {
+    return wx.getStorageSync(USER_DB_ID_STORAGE_KEY);
+  } catch (err) {
+    console.warn('读取本地 userDbId 失败:', err);
+    return null;
+  }
+}
+
+function isMissingAuthColumnError(error, column) {
+  const message = (error && error.message) || error?.toString?.() || '';
+  return message.includes(`users.${column}`) && message.includes('does not exist');
+}
+
+async function resolveUserDbId(userInfo) {
+  if (!userInfo || !userInfo.user_id) {
+    return null;
+  }
+
+  const cachedId = getCachedUserDbId();
+  if (cachedId) {
+    return cachedId;
+  }
+
+  try {
+    const queryMethod = typeof db.selectWithAuth === 'function' ? db.selectWithAuth : db.select;
+    let lastError = null;
+
+    for (const column of USER_AUTH_COLUMN_CANDIDATES) {
+      const params = {};
+      params[column] = userInfo.user_id;
+      try {
+        const users = await queryMethod('users', params);
+        if (users && users.length > 0) {
+          cacheUserDbId(users[0].id);
+          return users[0].id;
+        }
+        // 用户不存在，继续尝试下一个候选列
+        continue;
+      } catch (error) {
+        if (isMissingAuthColumnError(error, column)) {
+          lastError = error;
+          continue;
+        }
+        console.error('查询用户数据库ID失败:', error);
+        throw error;
+      }
+    }
+
+    if (lastError) {
+      console.error('查询用户数据库ID失败:', lastError);
+    }
+  } catch (err) {
+    console.error('查询用户数据库ID失败:', err);
+  }
+
+  return null;
+}
 
 // 格式化时间显示
 const formatTime = (timestamp) => {
-  const now = new Date();
+  if (!timestamp) {
+    return '';
+  }
+
   const postTime = new Date(timestamp);
+  if (Number.isNaN(postTime.getTime())) {
+    return '';
+  }
+
+  const now = new Date();
   const diffMs = now - postTime;
   const diffMinutes = Math.floor(diffMs / 60000);
   const diffHours = Math.floor(diffMinutes / 60);
   const diffDays = Math.floor(diffHours / 24);
   
-  if (diffMinutes < 60) {
+  if (diffMinutes < 1) {
+    return '刚刚';
+  } else if (diffMinutes < 60) {
     return diffMinutes + '分钟前';
   } else if (diffHours < 24) {
     return diffHours + '小时前';
@@ -33,7 +150,7 @@ const forumService = {
       const query = {
         limit: pageSize,
         offset: (page - 1) * pageSize,
-        order: 'created_at.desc'
+        order: 'create_time.desc'
       };
       
       // 根据标签类型调整排序
@@ -48,34 +165,55 @@ const forumService = {
       
       // 从Supabase获取数据
       const posts = await db.select('forum_posts', query);
-      
-      // 获取总条数
-      const totalResponse = await db.select('forum_posts', {
-        select: 'count(*)' + (category ? '&category=' + category : '')
-      });
-      const total = totalResponse[0]?.count || 0;
+
+      const userIds = Array.from(new Set(posts.map(post => post.user_id).filter(Boolean)));
+      let userMap = {};
+
+      if (userIds.length > 0) {
+        try {
+          const users = await db.select('users', {
+            id: `in.(${userIds.join(',')})`,
+            select: 'id,username,avatar_url'
+          });
+          userMap = users.reduce((acc, user) => {
+            acc[user.id] = user;
+            return acc;
+          }, {});
+        } catch (userError) {
+          console.warn('获取用户信息失败，使用帖子内字段:', userError);
+        }
+      }
       
       // 格式化数据
-      const formattedPosts = posts.map(post => ({
+      const formattedPosts = posts.map(post => {
+        const preview =
+          typeof post.content === 'string'
+            ? post.content.length > 100
+              ? post.content.substring(0, 100) + '...'
+              : post.content
+            : '';
+
+        return {
         id: post.id,
         title: post.title,
-        content: post.content.substring(0, 100) + '...', // 截取内容预览
-        username: post.username,
-        avatar: post.avatar_url || '',
-        time: formatTime(post.created_at),
+        content: preview,
+        username: userMap[post.user_id]?.username || post.username || '农友',
+        avatar: userMap[post.user_id]?.avatar_url || post.avatar_url || '',
+        time: formatTime(post.create_time || post.created_at),
         category: post.category,
-        likes: post.likes_count || 0,
-        comments: post.comments_count || 0,
-        views: post.views_count || 0,
+        likes: Number(post.likes_count) || 0,
+        comments: Number(post.comments_count) || 0,
+        views: Number(post.views_count) || 0,
         images: post.images || []
-      }));
+      };
+      });
 
       return {
         success: true,
         data: {
           list: formattedPosts,
-          hasMore: (page - 1) * pageSize + formattedPosts.length < total,
-          total: parseInt(total)
+          hasMore: formattedPosts.length === pageSize,
+          total: (page - 1) * pageSize + formattedPosts.length
         }
       };
     } catch (error) {
@@ -83,6 +221,63 @@ const forumService = {
       return {
         success: false,
         message: '获取数据失败，请稍后重试'
+      };
+    }
+  },
+
+  // 创建帖子
+  async createPost(postData = {}) {
+    try {
+      const userInfo = getAppUserInfo();
+      const userAuthId = userInfo && userInfo.user_id;
+
+      if (!userAuthId) {
+        throw new Error('用户未登录');
+      }
+
+      const userDbId = await resolveUserDbId(userInfo);
+
+      if (!userDbId) {
+        throw new Error('未找到用户信息，请重新登录');
+      }
+
+      if (!postData.title || !postData.content) {
+        throw new Error('标题和内容不能为空');
+      }
+
+      const payload = {
+        user_id: userDbId,
+        title: postData.title,
+        content: postData.content,
+        category: postData.category || '经验分享',
+        sub_category: postData.subCategory || '',
+        images: postData.images || [],
+        status: 'published'
+      };
+
+      let response;
+      if (typeof db.insertWithAuth === 'function') {
+        response = await db.insertWithAuth('forum_posts', payload);
+      } else {
+        response = await db.insert('forum_posts', payload);
+      }
+
+      let inserted = null;
+      if (Array.isArray(response) && response.length > 0) {
+        inserted = response[0];
+      } else if (response && response.data && Array.isArray(response.data) && response.data.length > 0) {
+        inserted = response.data[0];
+      }
+
+      return {
+        success: true,
+        data: inserted || { id: null, ...payload }
+      };
+    } catch (error) {
+      console.error('创建帖子失败:', error);
+      return {
+        success: false,
+        message: error.message || '发布失败，请稍后重试'
       };
     }
   },

@@ -6,7 +6,8 @@ App({
     isLoggedIn: false,    // 登录状态
     token: null,          // 认证令牌
     openId: null,         // 用户唯一标识
-    refreshToken: null    // 刷新令牌
+    refreshToken: null,   // 刷新令牌
+    userDbId: null        // users表中的ID
   },
   
   // 本地存储键名常量，便于统一管理
@@ -108,6 +109,9 @@ App({
     this.globalData.token = token;
     this.globalData.openId = openId;
     this.globalData.isLoggedIn = true;
+    if (userInfo && userInfo.user_db_id) {
+      this.globalData.userDbId = userInfo.user_db_id;
+    }
     
     if (refreshToken) {
       this.globalData.refreshToken = refreshToken;
@@ -138,6 +142,7 @@ App({
     this.globalData.openId = null;
     this.globalData.refreshToken = null;
     this.globalData.isLoggedIn = false;
+    this.globalData.userDbId = null;
     
     // 清除本地存储
     try {
@@ -146,6 +151,7 @@ App({
       wx.removeStorageSync(this.STORAGE_KEYS.OPEN_ID);
       wx.removeStorageSync(this.STORAGE_KEYS.REFRESH_TOKEN);
       wx.removeStorageSync(this.STORAGE_KEYS.LOGIN_STATUS);
+      wx.removeStorageSync('userDbId');
     } catch (error) {
       console.error('清除登录信息失败:', error);
     }

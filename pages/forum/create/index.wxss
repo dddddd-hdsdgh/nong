@@ -1,0 +1,95 @@
+.create-container {
+  padding: 30rpx;
+  background-color: #f8f8f8;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+.form-section {
+  background-color: #ffffff;
+  border-radius: 20rpx;
+  padding: 24rpx 28rpx;
+  margin-bottom: 24rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.04);
+}
+
+.section-label {
+  display: block;
+  font-size: 30rpx;
+  color: #333333;
+  margin-bottom: 16rpx;
+  font-weight: 600;
+}
+
+.section-input {
+  width: 100%;
+  border: 1rpx solid #e0e0e0;
+  border-radius: 12rpx;
+  padding: 18rpx 20rpx;
+  box-sizing: border-box;
+  font-size: 30rpx;
+  color: #333333;
+}
+
+.picker-value {
+  border: 1rpx solid #e0e0e0;
+  border-radius: 12rpx;
+  padding: 18rpx 20rpx;
+  font-size: 30rpx;
+  color: #333333;
+}
+
+.content-textarea {
+  width: 100%;
+  min-height: 240rpx;
+  border: 1rpx solid #e0e0e0;
+  border-radius: 12rpx;
+  padding: 18rpx 20rpx;
+  font-size: 30rpx;
+  color: #333333;
+  box-sizing: border-box;
+  line-height: 1.6;
+}
+
+.input-tip {
+  display: block;
+  text-align: right;
+  font-size: 24rpx;
+  color: #999999;
+  margin-top: 12rpx;
+}
+
+.actions {
+  display: flex;
+  gap: 24rpx;
+  margin-top: 20rpx;
+}
+
+.secondary-btn,
+.primary-btn {
+  flex: 1;
+  border-radius: 999rpx;
+  height: 88rpx;
+  line-height: 88rpx;
+  font-size: 32rpx;
+}
+
+.secondary-btn {
+  background-color: #ffffff;
+  color: #4caf50;
+  border: 1rpx solid #4caf50;
+}
+
+.primary-btn {
+  background-color: #4caf50;
+  color: #ffffff;
+  border: none;
+}
+
+.tips {
+  margin-top: 24rpx;
+  text-align: center;
+  color: #999999;
+  font-size: 24rpx;
+}
+

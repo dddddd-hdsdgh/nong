@@ -59,6 +59,25 @@ page {
   z-index: 90;
 }
 
+.error-banner {
+  margin: 20rpx 30rpx;
+  padding: 20rpx;
+  background-color: #fff6e5;
+  border: 1rpx solid #ffe0b3;
+  border-radius: 12rpx;
+  color: #b26b00;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20rpx;
+}
+
+.retry-btn {
+  margin: 0;
+  background-color: #ffb347;
+  color: #fff;
+}
+
 .tabs-container {
   display: flex;
   overflow-x: auto;
@@ -160,6 +179,14 @@ page {
   margin-bottom: 20rpx;
 }
 
+.post-title {
+  font-size: 34rpx;
+  font-weight: bold;
+  color: #333333;
+  margin-bottom: 12rpx;
+  display: block;
+}
+
 .post-text {
   font-size: 32rpx;
   color: #333333;
@@ -191,6 +218,52 @@ page {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.comment-area {
+  margin-top: 20rpx;
+  padding: 20rpx;
+  background-color: #f9f9f9;
+  border-radius: 16rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.comment-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.comment-label {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #333;
+}
+
+.comment-count {
+  font-size: 26rpx;
+  color: #777;
+}
+
+.comment-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20rpx;
+}
+
+.comment-tip {
+  font-size: 26rpx;
+  color: #888;
+  flex: 1;
+}
+
+.comment-btn {
+  background-color: #4caf50;
+  color: #fff;
+  border: none;
 }
 
 .post-tags {
@@ -265,6 +338,29 @@ page {
 
 .load-more:active {
   background-color: rgba(76, 175, 80, 0.1);
+}
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 80rpx 0;
+  color: #4caf50;
+  gap: 20rpx;
+}
+
+.loading-text {
+  font-size: 28rpx;
+}
+
+.comment-area,
+.comment-info,
+.comment-actions,
+.comment-label,
+.comment-count,
+.comment-tip,
+.comment-btn {
+  display: none;
 }
 
 /* 底部导航栏 */

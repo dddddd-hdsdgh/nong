@@ -42,6 +42,12 @@
     </scroll-view>
   </view>
   
+  <!-- 错误提示 -->
+  <view class="error-banner" wx:if="{{errorMessage}}">
+    <text>{{errorMessage}}</text>
+    <button size="mini" class="retry-btn" bindtap="loadForumData">重试</button>
+  </view>
+
   <!-- 帖子列表 -->
   <scroll-view class="forum-list" scroll-y="true" enable-back-to-top="true" enhanced show-scrollbar="false">
     <block wx:for="{{forumList}}" wx:key="id">
@@ -50,7 +56,7 @@
         <view class="post-header">
           <image class="avatar" src="{{item.avatar || '/static/icons/default-avatar.png'}}"></image>
           <view class="user-info">
-            <text class="username">{{item.username}}</text>
+            <text class="username">{{item.username || '匿名农友'}}</text>
             <text class="post-time">{{item.time}}</text>
           </view>
           <view class="post-meta" wx:if="{{item.isHot}}">
@@ -60,6 +66,7 @@
         
         <!-- 内容区域 -->
         <view class="post-content">
+          <text class="post-title" wx:if="{{item.title}}">{{item.title}}</text>
           <text class="post-text">{{item.content}}</text>
           
           <!-- 图片展示 -->
@@ -78,16 +85,23 @@
             <text class="stat-item">💬 {{item.comments}}</text>
           </view>
         </view>
+
       </view>
     </block>
     
     <!-- 空状态 -->
-    <view class="empty-state" wx:if="{{forumList.length === 0}}">
+    <view class="empty-state" wx:if="{{!loading && forumList.length === 0 && !errorMessage}}">
       <text class="empty-icon">🌾</text>
       <text class="empty-text">暂无相关帖子</text>
       <text class="empty-subtitle">成为第一个分享农业经验的人吧！</text>
     </view>
     
+    <!-- 加载中状态 -->
+    <view class="loading-state" wx:if="{{loading && forumList.length === 0}}">
+      <view class="loading-spinner"></view>
+      <text class="loading-text">正在加载内容...</text>
+    </view>
+
     <!-- 加载更多 -->
     <view class="load-more" bindtap="loadMore" wx:if="{{hasMore}}">
       <view class="loading-spinner"></view>

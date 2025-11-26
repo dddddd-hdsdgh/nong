@@ -1,0 +1,61 @@
+<view class="create-container">
+  <view class="form-section">
+    <text class="section-label">帖子标题</text>
+    <input
+      class="section-input"
+      placeholder="一句话概括你的问题或经验"
+      maxlength="{{maxTitleLength}}"
+      value="{{title}}"
+      bindinput="onTitleInput"
+    />
+    <text class="input-tip">{{title.length || 0}} / {{maxTitleLength}}</text>
+  </view>
+
+  <view class="form-section">
+    <text class="section-label">分类</text>
+    <picker mode="selector" range="{{categoryOptions}}" range-key="label" value="{{categoryIndex}}" bindchange="onCategoryChange">
+      <view class="picker-value">{{categoryOptions[categoryIndex].label}}</view>
+    </picker>
+  </view>
+
+  <view class="form-section">
+    <text class="section-label">标签（选填）</text>
+    <input
+      class="section-input"
+      placeholder="例如：水稻、玉米、柑橘等"
+      value="{{subCategory}}"
+      bindinput="onSubCategoryInput"
+    />
+  </view>
+
+  <view class="form-section">
+    <text class="section-label">正文内容</text>
+    <textarea
+      class="content-textarea"
+      placeholder="详细描述你的问题、经验或解决方案，至少10个字"
+      maxlength="{{maxContentLength}}"
+      value="{{content}}"
+      bindinput="onContentInput"
+      auto-height="true"
+    ></textarea>
+    <text class="input-tip">{{contentLength}} / {{maxContentLength}}</text>
+  </view>
+
+  <view class="actions">
+    <button class="secondary-btn" bindtap="resetForm">清空</button>
+    <button
+      class="primary-btn"
+      type="primary"
+      loading="{{isSubmitting}}"
+      disabled="{{isSubmitting}}"
+      bindtap="submitPost"
+    >
+      {{isSubmitting ? '发布中...' : '发布'}}
+    </button>
+  </view>
+
+  <view class="tips">
+    <text>发布即默认公开，严禁发布违法违规内容。</text>
+  </view>
+</view>
+
