@@ -1,6 +1,7 @@
 {
   "pages": [
     "pages/home/index",
+    "pages/identify/index",
     "pages/forum/index/index",
     "pages/forum/detail/index",
     "pages/forum/create/index",

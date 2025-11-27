@@ -1,0 +1,287 @@
+{
+  "name": "AI 病虫害识别任务处理",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai-task",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-node",
+      "name": "Webhook - 接收任务",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "ai-task-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 解析 Supabase Webhook 数据\nconst webhookData = $input.item.json;\n\n// Supabase Webhook 格式：\n// { type: 'INSERT', table: 'ai_tasks', record: {...}, old_record: null }\n// 或者直接是任务对象\nconst task = webhookData.record || webhookData;\n\n// 验证必要字段\nif (!task.id || !task.file_id) {\n  throw new Error('缺少必要字段: id 或 file_id');\n}\n\n// 如果状态不是 pending，跳过处理\nif (task.status && task.status !== 'pending') {\n  return [];\n}\n\nreturn {\n  json: {\n    task_id: task.id,\n    user_id: task.user_id,\n    file_id: task.file_id,\n    file_url: task.file_url || `https://wetcvycrvmzzzerqmtja.supabase.co/storage/v1/object/public/ai-images/${task.file_id}`,\n    description: task.description || '',\n    status: task.status || 'pending'\n  }\n};"
+      },
+      "id": "function-parse",
+      "name": "解析任务数据",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.file_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_ANON_KEY }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "http-download",
+      "name": "下载图片",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 调用 AI 模型进行识别\n// 这里提供两种方案：本地模型或第三方 API\n\nconst imageData = $input.item.binary.data;\nconst base64Image = imageData.toString('base64');\nconst taskData = $('解析任务数据').item.json;\n\n// ========== 方案 A: 调用本地 AI 模型 ==========\n// 如果你的 AI 模型部署在本地（如 Flask/FastAPI 服务）\nconst aiModelUrl = $env.AI_MODEL_API_URL || 'http://localhost:8000/predict';\n\ntry {\n  // 调用本地 AI 模型 API\n  const response = await $http.request({\n    method: 'POST',\n    url: aiModelUrl,\n    headers: {\n      'Content-Type': 'application/json'\n    },\n    body: {\n      image: base64Image,\n      // 可以添加其他参数\n      format: 'base64'\n    }\n  });\n  \n  // 假设返回格式：\n  // { disease_name: '水稻稻瘟病', confidence: 0.92, description: '...', control_methods: [...] }\n  return {\n    json: {\n      task_id: taskData.task_id,\n      result: {\n        diseaseName: response.disease_name || response.diseaseName,\n        confidence: response.confidence || 0,\n        description: response.description || '',\n        symptoms: response.symptoms || '',\n        controlMethods: response.control_methods || response.controlMethods || []\n      },\n      success: true\n    }\n  };\n} catch (error) {\n  // 如果本地模型失败，可以尝试第三方服务\n  console.error('本地模型调用失败:', error);\n  \n  // ========== 方案 B: 调用第三方 AI 服务（如 Replicate） ==========\n  // 取消注释以下代码使用 Replicate\n  /*\n  const replicateToken = $env.REPLICATE_API_TOKEN;\n  if (!replicateToken) {\n    throw new Error('未配置 REPLICATE_API_TOKEN');\n  }\n  \n  // 创建预测任务\n  const prediction = await $http.request({\n    method: 'POST',\n    url: 'https://api.replicate.com/v1/predictions',\n    headers: {\n      'Authorization': `Token ${replicateToken}`,\n      'Content-Type': 'application/json'\n    },\n    body: {\n      version: 'your-model-version-id', // 替换为实际的模型版本\n      input: {\n        image: `data:image/jpeg;base64,${base64Image}`\n      }\n    }\n  });\n  \n  // 轮询等待结果（简化版，实际应该用循环）\n  let result = prediction;\n  while (result.status === 'starting' || result.status === 'processing') {\n    await new Promise(resolve => setTimeout(resolve, 1000));\n    result = await $http.request({\n      method: 'GET',\n      url: `https://api.replicate.com/v1/predictions/${prediction.id}`,\n      headers: {\n        'Authorization': `Token ${replicateToken}`\n      }\n    });\n  }\n  \n  if (result.status === 'succeeded') {\n    return {\n      json: {\n        task_id: taskData.task_id,\n        result: result.output, // 根据实际返回格式调整\n        success: true\n      }\n    };\n  } else {\n    throw new Error(`AI 识别失败: ${result.error}`);\n  }\n  */\n  \n  // 如果都失败了，返回错误\n  return {\n    json: {\n      task_id: taskData.task_id,\n      success: false,\n      error: error.message || 'AI 识别失败'\n    }\n  };\n}"
+      },
+      "id": "function-ai",
+      "name": "AI 识别",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-success",
+              "leftValue": "={{ $json.success }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-success",
+      "name": "判断是否成功",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://wetcvycrvmzzzerqmtja.supabase.co/rest/v1/ai_tasks?id=eq.{{ $json.task_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": []
+        },
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"status\": \"completed\",\n  \"result\": {{ $json.result }},\n  \"completed_at\": \"{{ $now.toISO() }}\",\n  \"updated_at\": \"{{ $now.toISO() }}\"\n}",
+        "options": {}
+      },
+      "id": "http-update-success",
+      "name": "更新任务 - 成功",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1250, 200]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://wetcvycrvmzzzerqmtja.supabase.co/rest/v1/ai_tasks?id=eq.{{ $json.task_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": []
+        },
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"status\": \"failed\",\n  \"error_message\": \"{{ $json.error || 'AI 识别失败' }}\",\n  \"updated_at\": \"{{ $now.toISO() }}\"\n}",
+        "options": {}
+      },
+      "id": "http-update-failed",
+      "name": "更新任务 - 失败",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1250, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"message\": \"任务处理完成\",\n  \"task_id\": \"{{ $('解析任务数据').item.json.task_id }}\"\n}",
+        "options": {}
+      },
+      "id": "respond-webhook",
+      "name": "返回响应",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1450, 300]
+    }
+  ],
+  "connections": {
+    "Webhook - 接收任务": {
+      "main": [
+        [
+          {
+            "node": "解析任务数据",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "解析任务数据": {
+      "main": [
+        [
+          {
+            "node": "下载图片",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "下载图片": {
+      "main": [
+        [
+          {
+            "node": "AI 识别",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI 识别": {
+      "main": [
+        [
+          {
+            "node": "判断是否成功",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "判断是否成功": {
+      "main": [
+        [
+          {
+            "node": "更新任务 - 成功",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "更新任务 - 失败",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "更新任务 - 成功": {
+      "main": [
+        [
+          {
+            "node": "返回响应",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "更新任务 - 失败": {
+      "main": [
+        [
+          {
+            "node": "返回响应",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2025-01-21T00:00:00.000Z",
+  "versionId": "1"
+}
+

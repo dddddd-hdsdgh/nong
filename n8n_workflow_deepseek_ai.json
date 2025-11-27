@@ -1,0 +1,355 @@
+{
+  "name": "AI 病虫害识别 (DeepSeek + 实时返回)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai-identify",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-node",
+      "name": "Webhook - 接收识别请求",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "ai-identify-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 解析请求数据\nconst requestData = $input.item.json;\n\n// 验证必要字段\nif (!requestData.file_url && !requestData.file_id) {\n  throw new Error('缺少必要字段: file_url 或 file_id');\n}\n\n// 构建文件 URL\nlet fileUrl = requestData.file_url;\nif (!fileUrl && requestData.file_id) {\n  // 如果只有 file_id，构建 URL\n  let filePath = requestData.file_id;\n  if (filePath.startsWith('ai-images/')) {\n    filePath = filePath.substring('ai-images/'.length);\n  }\n  fileUrl = `https://wetcvycrvmzzzerqmtja.supabase.co/storage/v1/object/public/ai-images/${filePath}`;\n}\n\nreturn {\n  json: {\n    task_id: requestData.task_id || null,\n    user_id: requestData.user_id || null,\n    file_id: requestData.file_id || null,\n    file_url: fileUrl,\n    description: requestData.description || ''\n  }\n};"
+      },
+      "id": "function-parse",
+      "name": "解析请求数据",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "agent": "deepseek-chat",
+        "prompt": "你是一个专业的农业病虫害识别专家。请仔细分析用户提供的图片，识别其中的农作物病虫害。\n\n识别要求：\n1. 识别病虫害的名称（中文）\n2. 评估识别置信度（0-1之间的数值）\n3. 提供详细的病虫害描述\n4. 说明症状表现\n5. 提供防治方法（数组格式，至少3条）\n\n请严格按照以下 JSON 格式返回结果，不要添加任何其他文字：\n{\n  \"diseaseName\": \"病虫害名称\",\n  \"confidence\": 0.9,\n  \"description\": \"详细描述\",\n  \"symptoms\": \"症状表现\",\n  \"controlMethods\": [\"防治方法1\", \"防治方法2\", \"防治方法3\"]\n}",
+        "options": {
+          "systemMessage": "你是一个专业的农业病虫害识别专家，擅长识别各种农作物病虫害并提供专业的防治建议。",
+          "temperature": 0.3,
+          "maxTokens": 1000
+        }
+      },
+      "id": "ai-agent",
+      "name": "DeepSeek AI 识别",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1,
+      "position": [650, 300],
+      "credentials": {
+        "deepseekApi": {
+          "id": "deepseek-credential",
+          "name": "DeepSeek API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "add-image-url",
+              "name": "image_url",
+              "value": "={{ $json.file_url }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-image",
+      "name": "添加图片URL",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [550, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 解析 AI 返回的结果\nconst aiResponse = $input.item.json;\nconst requestData = $('解析请求数据').item.json;\n\n// AI Agent 可能返回文本格式的 JSON，需要解析\nlet resultText = '';\nif (typeof aiResponse === 'string') {\n  resultText = aiResponse;\n} else if (aiResponse.output) {\n  resultText = aiResponse.output;\n} else if (aiResponse.text) {\n  resultText = aiResponse.text;\n} else if (aiResponse.content) {\n  resultText = aiResponse.content;\n} else {\n  resultText = JSON.stringify(aiResponse);\n}\n\n// 尝试提取 JSON（可能包含在代码块中）\nlet result;\ntry {\n  // 先尝试直接解析\n  result = JSON.parse(resultText);\n} catch (e) {\n  // 尝试提取 JSON 代码块\n  const jsonMatch = resultText.match(/```json\\s*([\\s\\S]*?)\\s*```/) || \n                   resultText.match(/```\\s*([\\s\\S]*?)\\s*```/);\n  if (jsonMatch) {\n    result = JSON.parse(jsonMatch[1]);\n  } else {\n    // 尝试提取纯 JSON 对象\n    const jsonObjMatch = resultText.match(/\\{[\\s\\S]*\\}/);\n    if (jsonObjMatch) {\n      result = JSON.parse(jsonObjMatch[0]);\n    } else {\n      throw new Error('无法从 AI 响应中解析 JSON');\n    }\n  }\n}\n\n// 验证结果格式\nif (!result.diseaseName && !result.disease_name) {\n  throw new Error('AI 返回的结果格式不正确：缺少 diseaseName');\n}\n\n// 标准化结果格式\nconst standardizedResult = {\n  diseaseName: result.diseaseName || result.disease_name || '未知',\n  confidence: result.confidence || 0.8,\n  description: result.description || '',\n  symptoms: result.symptoms || '',\n  controlMethods: result.controlMethods || result.control_methods || []\n};\n\nreturn {\n  json: {\n    task_id: requestData.task_id,\n    user_id: requestData.user_id,\n    file_id: requestData.file_id,\n    file_url: requestData.file_url,\n    result: standardizedResult,\n    success: true\n  }\n};"
+      },
+      "id": "function-parse-result",
+      "name": "解析AI结果",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-success",
+              "leftValue": "={{ $json.success }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-success",
+      "name": "判断是否成功",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://wetcvycrvmzzzerqmtja.supabase.co/rest/v1/identify_records",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"user_id\": \"{{ $json.user_id }}\",\n  \"image_url\": \"{{ $json.file_url }}\",\n  \"result\": {{ $json.result }},\n  \"confidence\": {{ $json.result.confidence }},\n  \"status\": \"completed\"\n}",
+        "options": {}
+      },
+      "id": "http-save-history",
+      "name": "保存历史记录",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1250, 200]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://wetcvycrvmzzzerqmtja.supabase.co/rest/v1/ai_tasks?id=eq.{{ $json.task_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"status\": \"completed\",\n  \"result\": {{ $json.result }},\n  \"completed_at\": \"{{ $now.toISO() }}\",\n  \"updated_at\": \"{{ $now.toISO() }}\"\n}",
+        "options": {}
+      },
+      "id": "http-update-task",
+      "name": "更新任务状态",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://wetcvycrvmzzzerqmtja.supabase.co/rest/v1/ai_tasks?id=eq.{{ $json.task_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"status\": \"failed\",\n  \"error_message\": \"{{ $json.error || 'AI 识别失败' }}\",\n  \"updated_at\": \"{{ $now.toISO() }}\"\n}",
+        "options": {}
+      },
+      "id": "http-update-failed",
+      "name": "更新任务 - 失败",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1250, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": {{ $json.success }},\n  \"result\": {{ $json.result }},\n  \"task_id\": \"{{ $json.task_id }}\",\n  \"message\": \"识别完成\"\n}",
+        "options": {}
+      },
+      "id": "respond-webhook",
+      "name": "返回识别结果",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1450, 300]
+    }
+  ],
+  "connections": {
+    "Webhook - 接收识别请求": {
+      "main": [
+        [
+          {
+            "node": "解析请求数据",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "解析请求数据": {
+      "main": [
+        [
+          {
+            "node": "添加图片URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "添加图片URL": {
+      "main": [
+        [
+          {
+            "node": "DeepSeek AI 识别",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DeepSeek AI 识别": {
+      "main": [
+        [
+          {
+            "node": "解析AI结果",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "解析AI结果": {
+      "main": [
+        [
+          {
+            "node": "判断是否成功",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "判断是否成功": {
+      "main": [
+        [
+          {
+            "node": "保存历史记录",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "更新任务 - 失败",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "保存历史记录": {
+      "main": [
+        [
+          {
+            "node": "更新任务状态",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "更新任务状态": {
+      "main": [
+        [
+          {
+            "node": "返回识别结果",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "更新任务 - 失败": {
+      "main": [
+        [
+          {
+            "node": "返回识别结果",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2025-01-21T00:00:00.000Z",
+  "versionId": "1"
+}
+
+

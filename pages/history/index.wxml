@@ -1,0 +1,58 @@
+<view class="history-container">
+  <view class="page-header">
+    <text class="page-title">识别历史</text>
+    <text class="page-subtitle">查看最近的AI识别任务</text>
+  </view>
+
+  <view class="placeholder-card" wx:if="{{!isLoggedIn}}">
+    <text class="placeholder-title">暂未登录</text>
+    <text class="placeholder-desc">{{emptyHint}}</text>
+    <button class="primary-btn" size="mini" bindtap="handleLogin">立即登录</button>
+  </view>
+
+  <view class="placeholder-card" wx:elif="{{loading}}">
+    <view class="loading-spinner"></view>
+    <text class="placeholder-title">正在加载历史记录</text>
+    <text class="placeholder-desc">请稍候...</text>
+  </view>
+
+  <view class="placeholder-card placeholder-error" wx:elif="{{error}}">
+    <text class="placeholder-title">{{error}}</text>
+    <text class="placeholder-desc">可尝试重新加载或检查网络</text>
+    <button class="primary-btn" size="mini" bindtap="handleRetry">重新加载</button>
+  </view>
+
+  <view class="placeholder-card" wx:elif="{{tasks.length === 0}}">
+    <text class="placeholder-title">{{emptyText}}</text>
+    <text class="placeholder-desc">{{emptyHint}}</text>
+    <button class="primary-btn" size="mini" bindtap="navigateToIdentify" wx:if="{{isLoggedIn}}">去识别</button>
+  </view>
+
+  <view class="task-list" wx:else>
+    <block wx:for="{{tasks}}" wx:key="id">
+      <view class="task-card" bindtap="handleTaskTap" data-task-id="{{item.id}}" data-file-url="{{item.fileUrl}}">
+        <view class="task-row">
+          <text class="task-status status-{{item.status}}">{{item.statusText}}</text>
+          <text class="task-time">{{item.completedAt || item.updatedAt || item.createdAt}}</text>
+        </view>
+        <text class="task-summary">{{item.summary}}</text>
+        <view class="task-meta">
+          <text class="task-meta-item">创建时间：{{item.createdAt || '--'}}</text>
+          <text class="task-meta-item" wx:if="{{item.updatedAt}}">更新：{{item.updatedAt}}</text>
+        </view>
+      </view>
+    </block>
+
+    <view class="load-more" wx:if="{{hasMore}}">
+      <button class="secondary-btn" size="mini" bindtap="loadMore" wx:if="{{!loadingMore}}">加载更多</button>
+      <view class="loading-inline" wx:else>
+        <view class="loading-spinner-small"></view>
+        <text>加载中...</text>
+      </view>
+    </view>
+    <view class="list-footer" wx:elif="{{tasks.length > 0}}">
+      <text class="footer-text">已经到底啦</text>
+    </view>
+  </view>
+</view>
+

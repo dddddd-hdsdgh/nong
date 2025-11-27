@@ -17,8 +17,6 @@
         mode="aspectFill"
         class="preview-image"
       ></image>
-      
-      <!-- 识别中状态 - 由wx.showLoading处理 -->
     </view>
     
     <!-- 操作按钮组 -->
@@ -28,43 +26,86 @@
     </view>
     
     <!-- 状态提示 -->
-    <text class="status-text" wx:if="{{!loading && !imageTempPath && !showResult}}">准备就绪，点击按钮开始识别</text>
+    <text class="status-text" wx:if="{{!loading && !imageTempPath && !showResult && !taskId}}">准备就绪，点击按钮开始识别</text>
+    
+    <!-- 任务状态显示 -->
+    <view class="task-status-card" wx:if="{{taskId}}">
+      <view class="status-header">
+        <text class="status-label">任务状态</text>
+        <text class="status-value status-{{taskStatus || 'pending'}}">{{taskStatusText || '等待识别'}}</text>
+      </view>
+      <view class="status-meta">
+        <text wx:if="{{lastUpdatedAt}}">最近更新：{{lastUpdatedAt}}</text>
+        <text wx:if="{{taskData && taskData.description}}" class="status-desc">备注：{{taskData.description}}</text>
+      </view>
+      <view class="status-progress" wx:if="{{taskStatus !== 'completed' && taskStatus !== 'failed'}}">
+        <view class="loading-spinner"></view>
+        <text class="status-text">AI 正在识别中，请稍候...</text>
+      </view>
+      <view class="status-progress failed" wx:if="{{taskStatus === 'failed'}}">
+        <text class="status-icon">❌</text>
+        <text class="status-text">{{taskData && taskData.error_message ? taskData.error_message : '识别失败，请重试'}}</text>
+        <button bindtap="reIdentify" type="primary" size="mini" style="margin-top: 20rpx;">重新识别</button>
+      </view>
+      <image 
+        wx:if="{{(taskData && taskData.file_url) && !showResult}}" 
+        src="{{taskData.file_url}}" 
+        mode="aspectFill"
+        class="preview-image slim"
+      ></image>
+    </view>
     
     <!-- 识别结果展示区域 -->
-    <view class="result-container" wx:if="{{showResult && result}}">
+    <view class="result-container" wx:if="{{showResult}}">
       <view class="result-title">识别结果</view>
       
       <!-- 显示上传的图片 -->
       <image 
+        wx:if="{{imageTempPath}}" 
         src="{{imageTempPath}}" 
         mode="aspectFill"
         class="result-image"
       ></image>
       
       <view class="result-content">
-        <view class="result-item">
-          <text class="label">病害名称：</text>
-          <text class="value">{{result.diseaseName}}</text>
+        <view class="result-item" wx:if="{{resultSummary}}">
+          <text class="label">识别结论：</text>
+          <text class="value">{{resultSummary}}</text>
         </view>
         
-        <view class="result-item">
+        <view class="result-item" wx:if="{{resultConfidenceText}}">
           <text class="label">置信度：</text>
-          <text class="value">{{result.confidence ? (result.confidence * 100).toFixed(1) + '%' : '-'}}</text>
+          <text class="value">{{resultConfidenceText}}</text>
         </view>
         
-        <view class="result-section" wx:if="{{result.description}}">
-          <text class="section-title">病害描述</text>
-          <text class="description">{{result.description}}</text>
+        <view class="result-item" wx:if="{{taskId}}">
+          <text class="label">任务编号：</text>
+          <text class="value">{{taskId}}</text>
         </view>
         
-        <view class="result-section" wx:if="{{result.symptoms}}">
-          <text class="section-title">症状表现</text>
-          <text class="description">{{result.symptoms}}</text>
+        <view class="chip-list" wx:if="{{resultLabels.length}}">
+          <text class="chip" wx:for="{{resultLabels}}" wx:key="*this">{{item}}</text>
         </view>
         
-        <view class="result-section" wx:if="{{result.prevention}}">
-          <text class="section-title">防治建议</text>
-          <text class="description">{{result.prevention}}</text>
+        <view class="result-section" wx:if="{{resultSuggestions.length}}">
+          <text class="section-title">处理建议</text>
+          <view class="bullet-line" wx:for="{{resultSuggestions}}" wx:key="*this">
+            <text class="bullet">•</text>
+            <text class="description">{{item}}</text>
+          </view>
+        </view>
+        
+        <view class="result-section" wx:if="{{resultExtraPairs.length}}">
+          <text class="section-title">更多信息</text>
+          <view class="kv-row" wx:for="{{resultExtraPairs}}" wx:key="key">
+            <text class="kv-key">{{item.key}}</text>
+            <text class="kv-value">{{item.value}}</text>
+          </view>
+        </view>
+        
+        <view class="result-section" wx:if="{{formattedResultJson}}">
+          <text class="section-title">原始结果</text>
+          <text class="json-block">{{formattedResultJson}}</text>
         </view>
       </view>
       

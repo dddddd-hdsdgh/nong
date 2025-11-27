@@ -1,19 +1,223 @@
 // 识别页面逻辑
 // 导入识别服务
 const identifyService = require('../../services/identify');
+const aiIdentify = require('../../services/aiIdentify.js');
+
+const STATUS_TEXT_MAP = {
+  pending: '已排队，等待识别',
+  processing: 'AI 正在识别中',
+  completed: '识别完成',
+  failed: '识别失败'
+};
+
+const RESERVED_RESULT_KEYS = [
+  'summary',
+  'description',
+  'result',
+  'result_text',
+  'message',
+  'answer',
+  'output',
+  'symptoms',
+  'prevention',
+  'suggestions',
+  'recommendations',
+  'tips',
+  'labels',
+  'categories',
+  'predictions',
+  'tags',
+  'types',
+  'confidence',
+  'score',
+  'probability',
+  'confidenceScore',
+  'accuracy'
+];
+
+function normalizeToArray(value) {
+  if (!value && value !== 0) return [];
+  if (Array.isArray(value)) {
+    return value.filter(item => item !== undefined && item !== null && item !== '');
+  }
+  return [value].filter(item => item !== undefined && item !== null && item !== '');
+}
+
+function safeStringify(value) {
+  if (!value && value !== 0) return '';
+  if (typeof value === 'string') return value;
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch (error) {
+    return String(value);
+  }
+}
+
+function parseResultPayload(payload) {
+  if (!payload && payload !== 0) return null;
+  if (typeof payload === 'object') return payload;
+  try {
+    return JSON.parse(payload);
+  } catch (error) {
+    return { raw: payload };
+  }
+}
+
+function formatTimestamp(ts) {
+  if (!ts) return '';
+  const date = new Date(ts);
+  if (Number.isNaN(date.getTime())) {
+    return ts;
+  }
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  const hh = String(date.getHours()).padStart(2, '0');
+  const mi = String(date.getMinutes()).padStart(2, '0');
+  const ss = String(date.getSeconds()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
+}
+
+function formatResultData(rawInput) {
+  if (!rawInput && rawInput !== 0) {
+    return {
+      summary: '',
+      labels: [],
+      suggestions: [],
+      confidenceValue: null,
+      confidenceText: '',
+      extraPairs: []
+    };
+  }
+
+  const raw = typeof rawInput === 'object' ? rawInput : { result: rawInput };
+
+  const summary =
+    raw.summary ||
+    raw.description ||
+    raw.result_text ||
+    raw.result ||
+    raw.answer ||
+    raw.message ||
+    raw.output ||
+    '';
+
+  const confidenceSource =
+    raw.confidence ??
+    raw.score ??
+    raw.probability ??
+    raw.confidenceScore ??
+    raw.accuracy ??
+    null;
+
+  let confidenceValue = null;
+  let confidenceText = '';
+  if (confidenceSource !== null && confidenceSource !== undefined) {
+    const numeric =
+      typeof confidenceSource === 'number'
+        ? confidenceSource
+        : parseFloat(confidenceSource);
+
+    if (!Number.isNaN(numeric)) {
+      confidenceValue = numeric > 1 ? numeric / 100 : numeric;
+      confidenceText = `${(confidenceValue * 100).toFixed(1)}%`;
+    } else {
+      confidenceText = String(confidenceSource);
+    }
+  }
+
+  const labels =
+    normalizeToArray(raw.labels || raw.categories || raw.predictions || raw.tags || raw.types);
+
+  const suggestions = normalizeToArray(
+    raw.suggestions ||
+      raw.recommendations ||
+      raw.tips ||
+      raw.actions ||
+      raw.solutions ||
+      raw.plan
+  );
+
+  const extraPairs = Object.entries(raw)
+    .filter(([key]) => !RESERVED_RESULT_KEYS.includes(key))
+    .map(([key, value]) => ({
+      key,
+      value: typeof value === 'object' ? safeStringify(value) : value
+    }));
+
+  return {
+    summary,
+    labels,
+    suggestions,
+    confidenceValue,
+    confidenceText,
+    extraPairs
+  };
+}
 
 Page({
   data: {
     loading: false,
     result: null,
+    resultObject: null,
     imageTempPath: '',
-    showResult: false
+    showResult: false,
+    taskId: null, // 任务ID
+    taskStatus: null, // 任务状态
+    taskStatusText: '',
+    taskData: null, // 任务数据
+    pollingTimer: null, // 轮询定时器
+    formattedResultJson: '',
+    resultSummary: '',
+    resultConfidence: null,
+    resultConfidenceText: '',
+    resultLabels: [],
+    resultSuggestions: [],
+    resultExtraPairs: [],
+    lastUpdatedAt: ''
   },
 
-  onLoad: function() {
-    console.log('识别页面加载完成');
-    // 页面加载时检查相机权限
-    this.checkCameraPermission();
+  onLoad: function(options = {}) {
+    console.log('识别页面加载完成', options);
+    
+    const taskId = options.taskId || null;
+    const decodedFileUrl = options.fileUrl ? decodeURIComponent(options.fileUrl) : '';
+    let initialResult = null;
+    
+    if (options.result) {
+      try {
+        initialResult = parseResultPayload(decodeURIComponent(options.result));
+      } catch (error) {
+        console.warn('解析初始结果失败:', error);
+      }
+    }
+    
+    this.setData({
+      taskId,
+      imageTempPath: decodedFileUrl || this.data.imageTempPath,
+      showResult: !!initialResult,
+      loading: !!taskId && !initialResult
+    });
+    
+    if (initialResult) {
+      this.applyFormattedResult(initialResult, {
+        fileUrl: decodedFileUrl,
+        status: options.status || 'completed',
+        updatedAt: options.completedAt
+      });
+    }
+    
+    if (taskId && !initialResult) {
+      this.loadTaskStatus(taskId);
+    } else if (!taskId && !initialResult) {
+      // 页面加载时检查相机权限
+      this.checkCameraPermission();
+    }
+  },
+
+  onUnload: function() {
+    // 清除轮询定时器
+    this.clearPollingTimer();
   },
   
   onShow: function() {
@@ -198,7 +402,7 @@ Page({
   // 保存识别结果
   saveResult: function() {
     const that = this;
-    const recordId = that.data.result?.recordId;
+    const recordId = that.data.resultObject?.recordId || that.data.resultObject?.id || that.data.result?.recordId;
     
     if (!recordId) {
       wx.showToast({
@@ -247,7 +451,7 @@ Page({
   // 查看详情
   viewDiseaseDetail: function() {
     const that = this;
-    const diseaseId = that.data.result?.id;
+    const diseaseId = that.data.resultObject?.id;
     
     if (!diseaseId) {
       wx.showToast({
@@ -266,10 +470,157 @@ Page({
   
   // 重新识别
   reIdentify: function() {
+    this.clearPollingTimer();
     this.setData({
       result: null,
+      resultObject: null,
       showResult: false,
-      imageTempPath: ''
+      imageTempPath: '',
+      taskId: null,
+      taskStatus: null,
+      taskData: null,
+      formattedResultJson: '',
+      resultSummary: '',
+      resultConfidence: null,
+      resultConfidenceText: '',
+      resultLabels: [],
+      resultSuggestions: [],
+      lastUpdatedAt: ''
+    });
+  },
+
+  clearPollingTimer: function() {
+    if (this.data.pollingTimer) {
+      clearInterval(this.data.pollingTimer);
+      this.setData({ pollingTimer: null });
+    }
+  },
+
+  updateTaskState: function(task = {}) {
+    const status = task.status || 'pending';
+    this.setData({
+      taskStatus: status,
+      taskStatusText: STATUS_TEXT_MAP[status] || status,
+      taskData: task,
+      imageTempPath: this.data.imageTempPath || task.file_url || '',
+      lastUpdatedAt: formatTimestamp(task.completed_at || task.updated_at || task.created_at || this.data.lastUpdatedAt)
+    });
+  },
+
+  applyFormattedResult: function(resultData = {}, meta = {}) {
+    const formatted = formatResultData(resultData || {});
+    this.setData({
+      result: resultData,
+      resultObject: resultData,
+      showResult: true,
+      formattedResultJson: safeStringify(resultData),
+      resultSummary: formatted.summary,
+      resultConfidence: formatted.confidenceValue,
+      resultConfidenceText: formatted.confidenceText,
+      resultLabels: formatted.labels,
+      resultSuggestions: formatted.suggestions,
+      resultExtraPairs: formatted.extraPairs,
+      imageTempPath: meta.fileUrl || this.data.imageTempPath,
+      lastUpdatedAt: meta.updatedAt ? formatTimestamp(meta.updatedAt) : this.data.lastUpdatedAt
+    });
+  },
+
+  // 加载任务状态
+  loadTaskStatus: async function(taskId) {
+    const that = this;
+    
+    try {
+      const result = await aiIdentify.getTaskStatus(taskId);
+      
+      if (result.success) {
+        const task = result.data;
+        that.setData({ loading: false });
+        that.updateTaskState(task);
+        
+        // 如果任务已完成，显示结果
+        if (task.status === 'completed' && task.result) {
+          that.displayTaskResult(task);
+        } else if (task.status === 'failed') {
+          wx.showToast({
+            title: task.error_message || '识别失败',
+            icon: 'none',
+            duration: 3000
+          });
+        } else if (task.status === 'pending' || task.status === 'processing') {
+          // 任务还在处理中，开始轮询
+          that.startPolling(taskId);
+        }
+      } else {
+        that.setData({ loading: false });
+        wx.showToast({
+          title: result.error || '获取任务状态失败',
+          icon: 'none',
+          duration: 2000
+        });
+      }
+    } catch (error) {
+      console.error('加载任务状态失败:', error);
+      that.setData({ loading: false });
+      wx.showToast({
+        title: '获取任务状态失败',
+        icon: 'none',
+        duration: 2000
+      });
+    }
+  },
+
+  // 开始轮询任务状态
+  startPolling: function(taskId) {
+    const that = this;
+    
+    that.clearPollingTimer();
+    
+    // 每3秒轮询一次
+    const timer = setInterval(async () => {
+      try {
+        const result = await aiIdentify.getTaskStatus(taskId);
+        
+        if (result.success) {
+          const task = result.data;
+          that.updateTaskState(task);
+          
+          // 如果任务已完成或失败，停止轮询
+          if (task.status === 'completed') {
+            that.clearPollingTimer();
+            that.displayTaskResult(task);
+          } else if (task.status === 'failed') {
+            that.clearPollingTimer();
+            wx.showToast({
+              title: task.error_message || '识别失败',
+              icon: 'none',
+              duration: 3000
+            });
+          }
+        }
+      } catch (error) {
+        console.error('轮询任务状态失败:', error);
+      }
+    }, 3000);
+    
+    that.setData({ pollingTimer: timer });
+  },
+
+  // 显示任务结果
+  displayTaskResult: function(task) {
+    const that = this;
+    
+    const resultData = parseResultPayload(task.result);
+    that.applyFormattedResult(resultData || {}, {
+      fileUrl: task.file_url,
+      status: task.status,
+      updatedAt: task.completed_at || task.updated_at
+    });
+    that.updateTaskState(task);
+    
+    wx.showToast({
+      title: '识别完成',
+      icon: 'success',
+      duration: 2000
     });
   }
 });

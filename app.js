@@ -79,18 +79,33 @@ App({
       const openId = wx.getStorageSync(this.STORAGE_KEYS.OPEN_ID);
       const refreshToken = wx.getStorageSync(this.STORAGE_KEYS.REFRESH_TOKEN);
       const isLoggedIn = wx.getStorageSync(this.STORAGE_KEYS.LOGIN_STATUS);
+      const userDbId = wx.getStorageSync('userDbId');
       
       if (userInfo && token && openId) {
+        // 如果 userInfo 中没有 user_db_id，尝试从本地存储恢复
+        if (!userInfo.user_db_id && userDbId) {
+          userInfo.user_db_id = userDbId;
+          // 更新本地存储中的 userInfo
+          wx.setStorageSync(this.STORAGE_KEYS.USER_INFO, userInfo);
+        }
+        
         this.globalData.userInfo = userInfo;
         this.globalData.token = token;
         this.globalData.openId = openId;
         this.globalData.isLoggedIn = true;
         
+        // 恢复 userDbId
+        if (userDbId) {
+          this.globalData.userDbId = userDbId;
+        } else if (userInfo.user_db_id) {
+          this.globalData.userDbId = userInfo.user_db_id;
+        }
+        
         if (refreshToken) {
           this.globalData.refreshToken = refreshToken;
         }
         
-        console.log('用户已登录');
+        console.log('用户已登录', { userDbId: this.globalData.userDbId, userInfo });
       }
     } catch (error) {
       console.error('检查登录状态失败:', error);

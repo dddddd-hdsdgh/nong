@@ -1,5 +1,72 @@
 // 农业病虫害识别系统首页逻辑
 const app = getApp();
+const aiIdentify = require('../../services/aiIdentify.js');
+
+const STATUS_TEXT_MAP = {
+  pending: '等待处理',
+  processing: '识别中',
+  completed: '识别完成',
+  failed: '识别失败'
+};
+
+function formatTaskTime(value) {
+  if (!value) return '时间未知';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  const hh = String(date.getHours()).padStart(2, '0');
+  const mi = String(date.getMinutes()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
+}
+
+function parseResultPayload(payload) {
+  if (!payload && payload !== 0) return null;
+  if (typeof payload === 'object') return payload;
+  if (typeof payload === 'string') {
+    try {
+      return JSON.parse(payload);
+    } catch (error) {
+      return { summary: payload };
+    }
+  }
+  return { summary: String(payload) };
+}
+
+function buildTaskSummary(task) {
+  const parsed = parseResultPayload(task?.result);
+  const candidates = [
+    parsed?.summary,
+    parsed?.description,
+    parsed?.result,
+    parsed?.result_text,
+    parsed?.message,
+    parsed?.answer,
+    task?.description
+  ];
+  const summary = candidates.find(text => typeof text === 'string' && text.trim());
+  if (summary) {
+    return summary.trim().replace(/\s+/g, ' ');
+  }
+  if (task?.status === 'failed') {
+    return task?.error_message || '识别失败，请重新尝试';
+  }
+  return '识别结果生成后会展示在这里';
+}
+
+function normalizeHistoryTask(task) {
+  const status = task?.status || 'pending';
+  return {
+    id: task?.id || '',
+    status,
+    statusText: STATUS_TEXT_MAP[status] || '处理中',
+    summary: buildTaskSummary(task),
+    timeText: formatTaskTime(task?.completed_at || task?.updated_at || task?.created_at),
+    filePreview: task?.file_url || ''
+  };
+}
+
 Page({
   data: {
     title: '农业病虫害识别系统',
@@ -7,6 +74,11 @@ Page({
     // 添加识别相关数据
     identifyLoading: false,
     result: null,
+    currentTaskId: null, // 当前任务ID
+    historyLoading: false,
+    historyTasks: [],
+    historyError: '',
+    historyEmptyText: '暂无识别记录',
     // 农业资讯数据
     agricultureNews: [
       {
@@ -34,6 +106,7 @@ Page({
     console.log('首页加载完成');
     // 模拟数据加载
     this.loadHomeData();
+    this.fetchHistoryTasks();
   },
 
   onShow: function() {
@@ -55,6 +128,7 @@ Page({
       that.setData({
         loading: false
       });
+      that.fetchHistoryTasks();
       
       // 显示加载成功提示（可选）
       // wx.showToast({
@@ -69,6 +143,68 @@ Page({
   refreshData: function() {
     // 这里可以添加下拉刷新或定时刷新的逻辑
     console.log('刷新首页数据');
+    this.fetchHistoryTasks(true);
+  },
+
+  // 获取历史任务
+  fetchHistoryTasks: async function(isRefresh = false) {
+    if (!app.isAuthenticated()) {
+      this.setData({
+        historyTasks: [],
+        historyLoading: false,
+        historyError: '',
+        historyEmptyText: '登录后可查看历史记录'
+      });
+      return;
+    }
+
+    this.setData({
+      historyLoading: true,
+      historyError: '',
+      historyEmptyText: '暂无识别记录'
+    });
+
+    try {
+      const response = await aiIdentify.getUserTasks(5, 0);
+      if (!response.success) {
+        throw new Error(response.error || '获取历史记录失败');
+      }
+      const historyTasks = Array.isArray(response.data)
+        ? response.data.map(normalizeHistoryTask)
+        : [];
+
+      this.setData({
+        historyTasks,
+        historyLoading: false,
+        historyError: ''
+      });
+    } catch (error) {
+      console.error('加载历史记录失败:', error);
+      this.setData({
+        historyLoading: false,
+        historyError: error.message || '加载历史记录失败'
+      });
+    } finally {
+      if (isRefresh && typeof wx.stopPullDownRefresh === 'function') {
+        wx.stopPullDownRefresh();
+      }
+    }
+  },
+
+  // 重试加载历史任务
+  retryFetchHistory: function() {
+    this.fetchHistoryTasks(true);
+  },
+
+  // 查看任务详情
+  openTaskDetail: function(event) {
+    const taskId = event.currentTarget.dataset.taskId;
+    if (!taskId) {
+      return;
+    }
+    wx.navigateTo({
+      url: `/pages/identify/index?taskId=${taskId}`
+    });
   },
 
   // 检查相机权限
@@ -109,6 +245,24 @@ Page({
   performChooseMedia: function(source) {
     const that = this;
     
+    // 检查登录状态
+    if (!app.isAuthenticated()) {
+      wx.showModal({
+        title: '请先登录',
+        content: '使用AI识别功能需要先登录',
+        confirmText: '去登录',
+        cancelText: '暂不登录',
+        success: (res) => {
+          if (res.confirm) {
+            wx.navigateTo({
+              url: '/pages/login/index'
+            });
+          }
+        }
+      });
+      return;
+    }
+    
     that.setData({
       identifyLoading: true
     });
@@ -121,30 +275,8 @@ Page({
         const tempFilePath = res.tempFilePaths[0];
         console.log('获取图片成功:', tempFilePath);
         
-        // 模拟识别过程
-        setTimeout(() => {
-          // 模拟识别结果
-          const mockResult = {
-            diseaseName: '水稻稻瘟病',
-            confidence: 0.92,
-            description: '水稻稻瘟病是水稻最主要的病害之一，主要危害叶片、茎秆和穗部。',
-            controlMethods: [
-              '选择抗病品种',
-              '合理密植',
-              '及时喷施三环唑等药剂'
-            ]
-          };
-          
-          that.setData({
-            result: mockResult,
-            identifyLoading: false
-          });
-          
-          // 跳转到结果展示页面
-          wx.navigateTo({
-            url: '/pages/recommend/index?diseaseName=' + encodeURIComponent(mockResult.diseaseName)
-          });
-        }, 2000);
+        // 上传图片并创建任务
+        that.uploadAndCreateTask(tempFilePath);
       },
       fail(err) {
         console.log('获取图片失败:', err);
@@ -163,6 +295,88 @@ Page({
     };
     
     wx.chooseImage(options);
+  },
+
+  // 上传图片并创建AI识别任务
+  uploadAndCreateTask: async function(filePath) {
+    const that = this;
+    
+    try {
+      // 调用服务上传图片并创建任务
+      const result = await aiIdentify.uploadAndCreateTask(filePath, '');
+      
+      if (result.success) {
+        console.log('识别任务已创建:', result.data);
+        
+        const taskId = result.data.task_id;
+        const fileUrl = result.data.file_url ? encodeURIComponent(result.data.file_url) : '';
+        const initialResult = result.data.result ? encodeURIComponent(JSON.stringify(result.data.result)) : '';
+        const queryParams = [`taskId=${taskId}`];
+        if (fileUrl) {
+          queryParams.push(`fileUrl=${fileUrl}`);
+        }
+        if (initialResult) {
+          queryParams.push(`result=${initialResult}`);
+        }
+        
+        that.setData({
+          currentTaskId: taskId,
+          identifyLoading: false,
+          result: result.data.result || null
+        });
+        
+        wx.showToast({
+          title: result.data.result ? '识别完成' : '上传成功',
+          icon: 'success',
+          duration: 1500
+        });
+        
+        setTimeout(() => {
+          wx.navigateTo({
+            url: `/pages/identify/index?${queryParams.join('&')}`
+          });
+        }, 1200);
+      } else {
+        console.error('创建任务失败:', result.error);
+        that.setData({
+          identifyLoading: false
+        });
+        
+        // 如果需要重新登录，显示特殊提示
+        if (result.needRelogin) {
+          wx.showModal({
+            title: '登录已过期',
+            content: '您的登录已过期，请重新登录后重试',
+            confirmText: '去登录',
+            cancelText: '取消',
+            success: (res) => {
+              if (res.confirm) {
+                wx.navigateTo({
+                  url: '/pages/login/index'
+                });
+              }
+            }
+          });
+        } else {
+          wx.showToast({
+            title: result.error || '创建任务失败',
+            icon: 'none',
+            duration: 3000
+          });
+        }
+      }
+    } catch (error) {
+      console.error('上传并创建任务异常:', error);
+      that.setData({
+        identifyLoading: false
+      });
+      
+      wx.showToast({
+        title: '操作失败，请重试',
+        icon: 'none',
+        duration: 2000
+      });
+    }
   },
 
   // 拍照识别
@@ -213,6 +427,24 @@ Page({
   chooseImage: function() {
     const that = this;
     
+    // 检查登录状态
+    if (!app.isAuthenticated()) {
+      wx.showModal({
+        title: '请先登录',
+        content: '使用AI识别功能需要先登录',
+        confirmText: '去登录',
+        cancelText: '暂不登录',
+        success: (res) => {
+          if (res.confirm) {
+            wx.navigateTo({
+              url: '/pages/login/index'
+            });
+          }
+        }
+      });
+      return;
+    }
+    
     wx.chooseImage({
       count: 1,
       sizeType: ['compressed'],
@@ -225,33 +457,15 @@ Page({
           identifyLoading: true
         });
         
-        // 模拟识别过程
-        setTimeout(() => {
-          // 模拟识别结果
-          const mockResult = {
-            diseaseName: '小麦白粉病',
-            confidence: 0.88,
-            description: '小麦白粉病是小麦常见的真菌病害，主要危害叶片和茎秆。',
-            controlMethods: [
-              '选用抗病品种',
-              '合理施肥，控制氮肥用量',
-              '发病初期喷施粉锈宁等药剂'
-            ]
-          };
-          
-          that.setData({
-            result: mockResult,
-            identifyLoading: false
-          });
-          
-          // 跳转到结果展示页面
-          wx.navigateTo({
-            url: '/pages/recommend/index?diseaseName=' + encodeURIComponent(mockResult.diseaseName)
-          });
-        }, 2000);
+        // 上传图片并创建任务
+        that.uploadAndCreateTask(tempFilePath);
       },
       fail(err) {
         console.log('从相册选择图片失败:', err);
+        that.setData({
+          identifyLoading: false
+        });
+        
         if (err.errMsg !== 'chooseImage:fail cancel') {
           wx.showToast({
             title: '选择图片失败',

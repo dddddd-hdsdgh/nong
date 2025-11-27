@@ -82,6 +82,21 @@ CREATE TABLE forum_collections (
   UNIQUE(post_id, user_id)                 -- 唯一约束，防止重复收藏
 );
 
+-- 8. AI识别任务表 (ai_tasks) - 用于n8n处理流程
+CREATE TABLE ai_tasks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id),        -- 用户ID
+  file_id VARCHAR(255) NOT NULL,            -- Supabase Storage文件ID/路径
+  file_url VARCHAR(500),                    -- 文件完整URL
+  description TEXT,                         -- 用户描述（可选）
+  status VARCHAR(20) DEFAULT 'pending',    -- 状态(pending/processing/completed/failed)
+  result JSONB,                             -- 识别结果（JSON格式）
+  error_message TEXT,                       -- 错误信息（如果失败）
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- 创建时间
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- 更新时间
+  completed_at TIMESTAMP                     -- 完成时间
+);
+
 -- 8. 病虫害识别记录表 (identify_records)
 CREATE TABLE identify_records (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -163,6 +178,9 @@ CREATE INDEX idx_identify_records_user_id ON identify_records(user_id);
 CREATE INDEX idx_knowledge_articles_category_id ON knowledge_articles(category_id);
 CREATE INDEX idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX idx_notifications_is_read ON notifications(is_read);
+CREATE INDEX idx_ai_tasks_user_id ON ai_tasks(user_id);
+CREATE INDEX idx_ai_tasks_status ON ai_tasks(status);
+CREATE INDEX idx_ai_tasks_created_at ON ai_tasks(created_at DESC);
 
 -- 权限设置（Supabase特定）
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
@@ -178,3 +196,17 @@ ALTER TABLE forum_comments ENABLE ROW LEVEL SECURITY;
 CREATE OR REPLACE POLICY "Public can view comments" ON forum_comments FOR SELECT USING (true);
 CREATE OR REPLACE POLICY "Users can create comments" ON forum_comments FOR INSERT WITH CHECK (true);
 CREATE OR REPLACE POLICY "Users can update their own comments" ON forum_comments FOR UPDATE USING (user_id = auth.uid());
+
+ALTER TABLE ai_tasks ENABLE ROW LEVEL SECURITY;
+-- 注意：user_id 引用的是 users.id (UUID)，需要通过 users.auth_uid 关联 auth.uid()
+CREATE OR REPLACE POLICY "Users can view their own tasks" 
+ON ai_tasks FOR SELECT 
+USING (user_id IN (SELECT id FROM users WHERE auth_uid = auth.uid()));
+
+CREATE OR REPLACE POLICY "Users can create tasks" 
+ON ai_tasks FOR INSERT 
+WITH CHECK (user_id IN (SELECT id FROM users WHERE auth_uid = auth.uid()));
+
+CREATE OR REPLACE POLICY "Users can update their own tasks" 
+ON ai_tasks FOR UPDATE 
+USING (user_id IN (SELECT id FROM users WHERE auth_uid = auth.uid()));

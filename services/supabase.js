@@ -242,7 +242,14 @@ const db = {
    */
   async insert(table, data) {
     try {
-      const response = await supabase.post(`/rest/v1/${table}`, data);
+      // 添加 Prefer: return=representation 头，让 Supabase 返回插入的数据
+      const response = await supabase.fetch(`/rest/v1/${table}`, {
+        method: 'POST',
+        body: data,
+        header: {
+          'Prefer': 'return=representation'
+        }
+      });
       return response;
     } catch (error) {
       console.error('数据库插入失败:', error);
@@ -549,42 +556,37 @@ const auth = {
         return { success: false, error: '没有可用的refresh token' };
       }
 
-      // 模拟刷新token响应
-      const newToken = 'mock_token_' + Math.random().toString(36).substring(2, 20);
-      const newRefreshToken = 'mock_refresh_token_' + Math.random().toString(36).substring(2, 20);
-      
-      app.globalData.token = newToken;
-      wx.setStorageSync('token', newToken);
-      wx.setStorageSync('refreshToken', newRefreshToken);
-      
-      return { 
-        success: true, 
-        data: {
-          access_token: newToken,
-          refresh_token: newRefreshToken
-        } 
-      };
-      
-      /* 实际生产环境使用的代码
+      // 使用真实的 Supabase Auth API 刷新 token
       const response = await supabase.post('/auth/v1/token?grant_type=refresh_token', {
         refresh_token: refreshToken
       });
 
-      if (response.access_token) {
+      if (response && response.access_token) {
+        // 更新全局和本地存储的 token
         app.globalData.token = response.access_token;
         wx.setStorageSync('token', response.access_token);
         
+        // 如果返回了新的 refresh_token，也更新它
         if (response.refresh_token) {
+          app.globalData.refreshToken = response.refresh_token;
           wx.setStorageSync('refreshToken', response.refresh_token);
         }
         
-        return { success: true, data: response };
+        console.log('Token 刷新成功');
+        return { 
+          success: true, 
+          data: {
+            access_token: response.access_token,
+            refresh_token: response.refresh_token || refreshToken
+          } 
+        };
       }
       
-      return { success: false, error: '刷新token失败' };
-      */
+      // 如果响应中没有 access_token，说明刷新失败
+      console.error('刷新token失败: 响应中没有 access_token', response);
+      return { success: false, error: response?.error_description || response?.error || '刷新token失败' };
     } catch (error) {
-      console.error('刷新token失败:', error);
+      console.error('刷新token异常:', error);
       return { success: false, error: error.message || '网络请求失败' };
     }
   },
@@ -661,9 +663,13 @@ Object.assign(db, {
    */
   async insertWithAuth(table, data) {
     try {
+      // 添加 Prefer: return=representation 头，让 Supabase 返回插入的数据
       const response = await supabase.fetch(`/rest/v1/${table}`, {
         method: 'POST',
-        body: data
+        body: data,
+        header: {
+          'Prefer': 'return=representation'
+        }
       }, true);
       return response;
     } catch (error) {
